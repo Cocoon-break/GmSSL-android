@@ -1,2 +1,3 @@
+include ':gmlib'
 include ':app'
 rootProject.name = "gm_android"
