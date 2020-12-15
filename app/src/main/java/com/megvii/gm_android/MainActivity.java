@@ -89,5 +89,10 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "getDigestLength--->" + digestLen);
         int digestBlockSize = gmSSL.getDigestBlockSize("SM3");
         Log.d(TAG, "getDigestBlockSize--->" + digestBlockSize);
+
+        byte[] dgst = gmSSL.digest("SM3", "abc".getBytes());
+        for (int i = 0; i < dgst.length; i++) {
+            Log.d(TAG, "digest--->" + "dgst[" + i + "] = " + dgst[i]);
+        }
     }
 }

@@ -645,6 +645,50 @@ JNIEXPORT jint JNICALL getDigestBlockSize(JNIEnv *env, jclass thiz, jstring algo
     return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL digest(JNIEnv *env, jclass thiz, jstring algor, jbyteArray in) {
+    jbyteArray ret = NULL;
+    const char *alg = NULL;
+    const unsigned char *inbuf = NULL;
+    unsigned char outbuf[EVP_MAX_MD_SIZE];
+    int inlen;
+    unsigned int outlen = sizeof(outbuf);
+    const EVP_MD *md;
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("digest GetStringUTFChars failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
+        LOGE("digest GetByteArrayElements failed");
+        goto end;
+    }
+    if ((inlen = (size_t) env->GetArrayLength(in)) <= 0) {
+        LOGE("digest GetArrayLength failed");
+        goto end;
+    }
+
+    if (!(md = EVP_get_digestbyname(alg))) {
+        LOGE("digest EVP_get_digestbyname failed");
+        goto end;
+    }
+    if (!EVP_Digest(inbuf, inlen, outbuf, &outlen, md, NULL)) {
+        LOGE("digest EVP_Digest failed");
+        goto end;
+    }
+
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("digest NewByteArray failed");
+        goto end;
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (inbuf) env->ReleaseByteArrayElements(in, (jbyte *) inbuf, JNI_ABORT);
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -668,7 +712,7 @@ static JNINativeMethod methods[] = {
         {"symmetricDecrypt",        "(Ljava/lang/String;[B[B[B)[B", (void *) symmetricDecrypt},
         {"getDigestLength",         "(Ljava/lang/String;)I",        (void *) getDigestLength},
         {"getDigestBlockSize",      "(Ljava/lang/String;)I",        (void *) getDigestBlockSize},
-//        {"digest",                  "(Ljava/lang/String;[B)[B",                (void *) digest},
+        {"digest",                  "(Ljava/lang/String;[B)[B",     (void *) digest},
 //        {"getMacLength",            "(Ljava/lang/String;)[Ljava/lang/String;", (void *) getMacLength},
 //        {"mac",                     "(Ljava/lang/String;[B[B)[B",              (void *) mac},
 //        {"sign",                    "(Ljava/lang/String;[B[B)[B",              (void *) sign},

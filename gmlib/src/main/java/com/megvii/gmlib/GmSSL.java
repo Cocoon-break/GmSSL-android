@@ -30,8 +30,8 @@ public class GmSSL {
     public native int getDigestLength(String digest);
 
     public native int getDigestBlockSize(String digest);
-//
-//    public native byte[] digest(String algor, byte[] data);
+
+    public native byte[] digest(String algor, byte[] data);
 //
 //    public native String[] getMacLength(String algor);
 //
