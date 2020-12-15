@@ -47,9 +47,14 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "deriveKeyAlgorithms--->" + deriveKeyAlgorithms);
         }
 
+        // generateRandom
         byte[] data = gmSSL.generateRandom(20);
         for (int i = 0; i < data.length; i++) {
             Log.d(TAG, "data[" + i + "] = " + data[i]);
         }
+
+        // getCipherIVLength
+        int sms4Len = gmSSL.getCipherIVLength("SMS4");
+        Log.d(TAG, "getCipherIVLength--->" + sms4Len);
     }
 }
