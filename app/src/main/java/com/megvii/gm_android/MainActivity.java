@@ -73,5 +73,10 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "symmetricEncrypt--->" + "ciphertext[" + i + "] = " + ciphertext[i]);
         }
 
+        // symmetricDecrypt
+        byte[] plaintext = gmSSL.symmetricDecrypt("sms4", ciphertext, key, iv);
+        for (int i = 0; i < plaintext.length; i++) {
+            Log.d(TAG, "symmetricDecrypt--->" + "plaintext[" + i + "] = " + plaintext[i]);
+        }
     }
 }

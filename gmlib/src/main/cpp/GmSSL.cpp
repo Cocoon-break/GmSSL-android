@@ -516,6 +516,91 @@ JNIEXPORT jbyteArray JNICALL symmetricEncrypt(JNIEnv *env, jclass thiz, jstring 
     return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL symmetricDecrypt(JNIEnv *env, jclass thiz, jstring algor,
+                                              jbyteArray in, jbyteArray key, jbyteArray iv) {
+    jbyteArray ret = NULL;
+    const char *alg = NULL;
+    const unsigned char *inbuf = NULL;
+    const unsigned char *keybuf = NULL;
+    const unsigned char *ivbuf = NULL;
+    void *outbuf = NULL;
+    int inlen, keylen, ivlen, outlen, lastlen;
+    const EVP_CIPHER *cipher;
+    EVP_CIPHER_CTX *cctx = NULL;
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("symmetricDecrypt GetStringUTFChars failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
+        LOGE("symmetricDecrypt GetByteArrayElements failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(in)) <= 0) {
+        LOGE("symmetricDecrypt GetArrayLength failed");
+        goto end;
+    }
+    if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
+        LOGE("symmetricDecrypt GetByteArrayElements 2 failed");
+        goto end;
+    }
+    if ((keylen = env->GetArrayLength(key)) <= 0) {
+        LOGE("symmetricDecrypt GetArrayLength 2 failed");
+        goto end;
+    }
+    ivbuf = (unsigned char *) env->GetByteArrayElements(iv, 0);
+    ivlen = env->GetArrayLength(iv);
+
+
+    if (!(cipher = EVP_get_cipherbyname(alg))) {
+        LOGE("symmetricDecrypt EVP_get_cipherbyname failed");
+        goto end;
+    }
+    if (keylen != EVP_CIPHER_key_length(cipher)) {
+        LOGE("symmetricDecrypt EVP_CIPHER_key_length failed");
+        goto end;
+    }
+    if (ivlen != EVP_CIPHER_iv_length(cipher)) {
+        LOGE("symmetricDecrypt EVP_CIPHER_iv_length failed");
+        goto end;
+    }
+    if (!(outbuf = OPENSSL_malloc(inlen))) {
+        LOGE("symmetricDecrypt OPENSSL_malloc failed");
+        goto end;
+    }
+    if (!(cctx = EVP_CIPHER_CTX_new())) {
+        LOGE("symmetricDecrypt EVP_CIPHER_CTX_new failed");
+        goto end;
+    }
+    if (!EVP_DecryptInit_ex(cctx, cipher, NULL, keybuf, ivbuf)) {
+        LOGE("symmetricDecrypt EVP_DecryptInit_ex failed");
+        goto end;
+    }
+    if (!EVP_DecryptUpdate(cctx, (unsigned char *) outbuf, &outlen, inbuf, inlen)) {
+        LOGE("symmetricDecrypt EVP_DecryptUpdate failed");
+        goto end;
+    }
+    if (!EVP_DecryptFinal_ex(cctx, (unsigned char *) outbuf + outlen, &lastlen)) {
+        LOGE("symmetricDecrypt EVP_DecryptFinal_ex failed");
+        goto end;
+    }
+    outlen += lastlen;
+
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("symmetricDecrypt NewByteArray failed");
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (keybuf) env->ReleaseByteArrayElements(key, (jbyte *) keybuf, JNI_ABORT);
+    if (inbuf) env->ReleaseByteArrayElements(in, (jbyte *) inbuf, JNI_ABORT);
+    if (ivbuf) env->ReleaseByteArrayElements(iv, (jbyte *) ivbuf, JNI_ABORT);
+    EVP_CIPHER_CTX_free(cctx);
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -536,7 +621,7 @@ static JNINativeMethod methods[] = {
         {"getCipherKeyLength",      "(Ljava/lang/String;)I",        (void *) getCipherKeyLength},
         {"getCipherBlockSize",      "(Ljava/lang/String;)I",        (void *) getCipherBlockSize},
         {"symmetricEncrypt",        "(Ljava/lang/String;[B[B[B)[B", (void *) symmetricEncrypt},
-//        {"symmetricDecrypt",        "(Ljava/lang/String;[B[B[B)[B",            (void *) symmetricDecrypt},
+        {"symmetricDecrypt",        "(Ljava/lang/String;[B[B[B)[B", (void *) symmetricDecrypt},
 //        {"getDigestLength",         "(Ljava/lang/String;)I",                   (void *) getDigestLength},
 //        {"getDigestBlockSize",      "(Ljava/lang/String;)I",                   (void *) getDigestBlockSize},
 //        {"digest",                  "(Ljava/lang/String;[B)[B",                (void *) digest},
