@@ -85,6 +85,7 @@
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 #define NUM_ARRAY_ELEMENTS(p) ((int) sizeof(p) / sizeof(p[0]))
+#define OSSL_NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
 
 JNIEXPORT jobjectArray JNICALL getVersions(JNIEnv *env, jclass thiz) {
@@ -106,8 +107,7 @@ JNIEXPORT jobjectArray JNICALL getVersions(JNIEnv *env, jclass thiz) {
     return ret;
 }
 
-static void list_cipher_fn(const EVP_CIPHER *c,
-                           const char *from, const char *to, void *argv) {
+static void list_cipher_fn(const EVP_CIPHER *c, const char *from, const char *to, void *argv) {
     STACK_OF(OPENSSL_CSTRING) *sk = static_cast<stack_st_OPENSSL_CSTRING *>(argv);
     if (c) {
         sk_OPENSSL_CSTRING_push(sk, EVP_CIPHER_name(c));
@@ -142,8 +142,7 @@ JNIEXPORT jobjectArray JNICALL getCiphers(JNIEnv *env, jclass thiz) {
     return ret;
 }
 
-static void list_md_fn(const EVP_MD *md,
-                       const char *from, const char *to, void *argv) {
+static void list_md_fn(const EVP_MD *md, const char *from, const char *to, void *argv) {
     STACK_OF(OPENSSL_CSTRING) *sk = static_cast<stack_st_OPENSSL_CSTRING *>(argv);
     if (md) {
         sk_OPENSSL_CSTRING_push(sk, EVP_MD_name(md));
@@ -152,8 +151,7 @@ static void list_md_fn(const EVP_MD *md,
     }
 }
 
-JNIEXPORT jobjectArray JNICALL getDigests(
-        JNIEnv *env, jclass thiz) {
+JNIEXPORT jobjectArray JNICALL getDigests(JNIEnv *env, jclass thiz) {
     jobjectArray ret = NULL;
     STACK_OF(OPENSSL_CSTRING) *sk = NULL;
     int i;
@@ -180,6 +178,32 @@ JNIEXPORT jobjectArray JNICALL getDigests(
     return ret;
 }
 
+char *mac_algors[] = {
+        "CMAC-SMS4",
+        "HMAC-SM3",
+        "HMAC-SHA1",
+        "HMAC-SHA256",
+        "HMAC-SHA512",
+};
+
+JNIEXPORT jobjectArray JNICALL getMacs(
+        JNIEnv *env, jclass thiz) {
+    jobjectArray ret = NULL;
+    int i;
+    if (!(ret = env->NewObjectArray(OSSL_NELEM(mac_algors),
+                                    env->FindClass("java/lang/String"),
+                                    env->NewStringUTF("")))) {
+        LOGE("getMacs NewObjectArray failed");
+        return NULL;
+    }
+
+    for (i = 0; i < OSSL_NELEM(mac_algors); i++) {
+        env->SetObjectArrayElement(ret, i, env->NewStringUTF(mac_algors[i]));
+    }
+
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -191,7 +215,7 @@ static JNINativeMethod methods[] = {
         {"getVersions", "()[Ljava/lang/String;", (void *) getVersions},
         {"getCiphers",  "()[Ljava/lang/String;", (void *) getCiphers},
         {"getDigests",  "()[Ljava/lang/String;", (void *) getDigests},
-//        {"getMacs",                 "()[Ljava/lang/String;",                   (void *) getMacs},
+        {"getMacs",     "()[Ljava/lang/String;", (void *) getMacs},
 //        {"getSignAlgorithms",       "()[Ljava/lang/String;",                   (void *) getSignAlgorithms},
 //        {"getPublicKeyEncryptions", "()[Ljava/lang/String;",                   (void *) getPublicKeyEncryptions},
 //        {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;",                   (void *) getDeriveKeyAlgorithms},

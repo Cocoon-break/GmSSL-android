@@ -28,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
         for (String digest : gmSSL.getDigests()) {
             Log.d(TAG, "digest--->" + digest);
         }
-
+        // getMacs
+        for (String mac : gmSSL.getMacs()) {
+            Log.d(TAG, "mac--->" + mac);
+        }
     }
 }
