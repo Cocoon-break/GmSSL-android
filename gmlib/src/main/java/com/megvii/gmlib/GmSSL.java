@@ -24,10 +24,10 @@ public class GmSSL {
     public native int getCipherBlockSize(String cipher);
 
     public native byte[] symmetricEncrypt(String cipher, byte[] in, byte[] key, byte[] iv);
-//
+
     public native byte[] symmetricDecrypt(String cipher, byte[] in, byte[] key, byte[] iv);
-//
-//    public native int getDigestLength(String digest);
+
+    public native int getDigestLength(String digest);
 //
 //    public native int getDigestBlockSize(String digest);
 //

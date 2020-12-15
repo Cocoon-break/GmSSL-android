@@ -52,7 +52,11 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < data.length; i++) {
             Log.d(TAG, "data[" + i + "] = " + data[i]);
         }
+        sm4(gmSSL);
+        sm3(gmSSL);
+    }
 
+    private void sm4(GmSSL gmSSL) {
         // getCipherIVLength
         int cipherIVLen = gmSSL.getCipherIVLength("SMS4");
         Log.d(TAG, "getCipherIVLength--->" + cipherIVLen);
@@ -78,5 +82,11 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < plaintext.length; i++) {
             Log.d(TAG, "symmetricDecrypt--->" + "plaintext[" + i + "] = " + plaintext[i]);
         }
+    }
+
+    private void sm3(GmSSL gmSSL) {
+        int digestLen = gmSSL.getDigestLength("SM3");
+        Log.d(TAG, "getDigestLength--->" + digestLen);
+
     }
 }
