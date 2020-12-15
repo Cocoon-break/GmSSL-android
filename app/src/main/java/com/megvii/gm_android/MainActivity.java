@@ -64,5 +64,14 @@ public class MainActivity extends AppCompatActivity {
         // getCipherKeyLength
         int cipherBlockSize = gmSSL.getCipherBlockSize("SMS4");
         Log.d(TAG, "getCipherBlockSize--->" + cipherBlockSize);
+
+        // symmetricEncrypt
+        byte[] key = {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8};
+        byte[] iv = {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8};
+        byte[] ciphertext = gmSSL.symmetricEncrypt("SMS4", "01234567".getBytes(), key, iv);
+        for (int i = 0; i < ciphertext.length; i++) {
+            Log.d(TAG, "symmetricEncrypt--->" + "ciphertext[" + i + "] = " + ciphertext[i]);
+        }
+
     }
 }

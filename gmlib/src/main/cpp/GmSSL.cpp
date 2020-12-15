@@ -430,6 +430,92 @@ JNIEXPORT jint JNICALL getCipherBlockSize(JNIEnv *env, jclass thiz, jstring algo
     return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL symmetricEncrypt(JNIEnv *env, jclass thiz, jstring algor,
+                                              jbyteArray in, jbyteArray key, jbyteArray iv) {
+    jbyteArray ret = NULL;
+    const char *alg = NULL;
+    const unsigned char *keybuf = NULL;
+    const unsigned char *ivbuf = NULL;
+    const unsigned char *inbuf = NULL;
+    void *outbuf = NULL;
+    int inlen, keylen, ivlen, outlen, lastlen;
+    const EVP_CIPHER *cipher;
+    EVP_CIPHER_CTX *cctx = NULL;
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("symmetricEncrypt GetStringUTFChars failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
+        LOGE("symmetricEncrypt GetByteArrayElements failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(in)) <= 0) {
+        LOGE("symmetricEncrypt GetArrayLength failed");
+        goto end;
+    }
+    if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
+        LOGE("symmetricEncrypt GetByteArrayElements 2 failed");
+        goto end;
+    }
+    if ((keylen = env->GetArrayLength(key)) <= 0) {
+        LOGE("symmetricEncrypt GetArrayLength 2 failed");
+        goto end;
+    }
+    ivbuf = (unsigned char *) env->GetByteArrayElements(iv, 0);
+    ivlen = env->GetArrayLength(iv);
+
+    if (!(cipher = EVP_get_cipherbyname(alg))) {
+        LOGE("symmetricEncrypt EVP_get_cipherbyname failed");
+        goto end;
+    }
+    if (keylen != EVP_CIPHER_key_length(cipher)) {
+        LOGE("symmetricEncrypt EVP_CIPHER_key_length failed");
+        goto end;
+    }
+    if (ivlen != EVP_CIPHER_iv_length(cipher)) {
+        LOGE("symmetricEncrypt EVP_CIPHER_iv_length failed");
+        goto end;
+    }
+    if (!(outbuf = OPENSSL_malloc(inlen + 2 * EVP_CIPHER_block_size(cipher)))) {
+        LOGE("symmetricEncrypt OPENSSL_malloc failed");
+        goto end;
+    }
+    if (!(cctx = EVP_CIPHER_CTX_new())) {
+        LOGE("symmetricEncrypt EVP_CIPHER_CTX_new failed");
+        goto end;
+    }
+    if (!EVP_EncryptInit_ex(cctx, cipher, NULL, keybuf, ivbuf)) {
+        LOGE("symmetricEncrypt EVP_EncryptInit_ex failed");
+        goto end;
+    }
+    if (!EVP_EncryptUpdate(cctx, (unsigned char *) outbuf, &outlen, inbuf, inlen)) {
+        LOGE("symmetricEncrypt EVP_EncryptUpdate failed");
+        goto end;
+    }
+    if (!EVP_EncryptFinal_ex(cctx, (unsigned char *) outbuf + outlen, &lastlen)) {
+        LOGE("symmetricEncrypt EVP_EncryptFinal_ex failed");
+        goto end;
+    }
+    outlen += lastlen;
+
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("symmetricEncrypt NewByteArray failed");
+        goto end;
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (keybuf) env->ReleaseByteArrayElements(key, (jbyte *) keybuf, JNI_ABORT);
+    if (inbuf) env->ReleaseByteArrayElements(in, (jbyte *) inbuf, JNI_ABORT);
+    if (ivbuf) env->ReleaseByteArrayElements(iv, (jbyte *) ivbuf, JNI_ABORT);
+    OPENSSL_free(outbuf);
+    EVP_CIPHER_CTX_free(cctx);
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -438,18 +524,18 @@ JNIEXPORT jint JNICALL getCipherBlockSize(JNIEnv *env, jclass thiz, jstring algo
 } JNINativeMethod;
  */
 static JNINativeMethod methods[] = {
-        {"getVersions",             "()[Ljava/lang/String;", (void *) getVersions},
-        {"getCiphers",              "()[Ljava/lang/String;", (void *) getCiphers},
-        {"getDigests",              "()[Ljava/lang/String;", (void *) getDigests},
-        {"getMacs",                 "()[Ljava/lang/String;", (void *) getMacs},
-        {"getSignAlgorithms",       "()[Ljava/lang/String;", (void *) getSignAlgorithms},
-        {"getPublicKeyEncryptions", "()[Ljava/lang/String;", (void *) getPublicKeyEncryptions},
-        {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;", (void *) getDeriveKeyAlgorithms},
-        {"generateRandom",          "(I)[B",                 (void *) generateRandom},
-        {"getCipherIVLength",       "(Ljava/lang/String;)I", (void *) getCipherIVLength},
-        {"getCipherKeyLength",      "(Ljava/lang/String;)I", (void *) getCipherKeyLength},
-        {"getCipherBlockSize",      "(Ljava/lang/String;)I", (void *) getCipherBlockSize},
-//        {"symmetricEncrypt",        "(Ljava/lang/String;[B[B[B)[B",            (void *) symmetricEncrypt},
+        {"getVersions",             "()[Ljava/lang/String;",        (void *) getVersions},
+        {"getCiphers",              "()[Ljava/lang/String;",        (void *) getCiphers},
+        {"getDigests",              "()[Ljava/lang/String;",        (void *) getDigests},
+        {"getMacs",                 "()[Ljava/lang/String;",        (void *) getMacs},
+        {"getSignAlgorithms",       "()[Ljava/lang/String;",        (void *) getSignAlgorithms},
+        {"getPublicKeyEncryptions", "()[Ljava/lang/String;",        (void *) getPublicKeyEncryptions},
+        {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;",        (void *) getDeriveKeyAlgorithms},
+        {"generateRandom",          "(I)[B",                        (void *) generateRandom},
+        {"getCipherIVLength",       "(Ljava/lang/String;)I",        (void *) getCipherIVLength},
+        {"getCipherKeyLength",      "(Ljava/lang/String;)I",        (void *) getCipherKeyLength},
+        {"getCipherBlockSize",      "(Ljava/lang/String;)I",        (void *) getCipherBlockSize},
+        {"symmetricEncrypt",        "(Ljava/lang/String;[B[B[B)[B", (void *) symmetricEncrypt},
 //        {"symmetricDecrypt",        "(Ljava/lang/String;[B[B[B)[B",            (void *) symmetricDecrypt},
 //        {"getDigestLength",         "(Ljava/lang/String;)I",                   (void *) getDigestLength},
 //        {"getDigestBlockSize",      "(Ljava/lang/String;)I",                   (void *) getDigestBlockSize},

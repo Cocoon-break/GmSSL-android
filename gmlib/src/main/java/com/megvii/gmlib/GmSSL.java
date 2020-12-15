@@ -22,8 +22,8 @@ public class GmSSL {
     public native int getCipherKeyLength(String cipher);
 
     public native int getCipherBlockSize(String cipher);
-//
-//    public native byte[] symmetricEncrypt(String cipher, byte[] in, byte[] key, byte[] iv);
+
+    public native byte[] symmetricEncrypt(String cipher, byte[] in, byte[] key, byte[] iv);
 //
 //    public native byte[] symmetricDecrypt(String cipher, byte[] in, byte[] key, byte[] iv);
 //
