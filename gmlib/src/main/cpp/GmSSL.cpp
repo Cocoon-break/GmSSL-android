@@ -1341,6 +1341,244 @@ JNIEXPORT jbyteArray JNICALL publicKeyDecrypt(JNIEnv *env, jclass thiz, jstring 
     return ret;
 }
 
+static int get_exch_info(const char *alg, int *ppkey_type, int *pec_scheme,
+                         int *pecdh_cofactor_mode, int *pecdh_kdf_type, int *pecdh_kdf_md,
+                         int *pecdh_kdf_outlen, char **pecdh_kdf_ukm, int *pecdh_kdf_ukmlen) {
+    int pkey_type = 0;
+    int ec_scheme = 0;
+    int ecdh_cofactor_mode = 0;
+    int ecdh_kdf_type = 0;
+    int ecdh_kdf_md = 0;
+    int ecdh_kdf_outlen = 0;
+    char *ecdh_kdf_ukm = NULL;
+    int ecdh_kdf_ukmlen = 0;
+
+    switch (OBJ_txt2nid(alg)) {
+#ifndef OPENSSL_NO_SM2
+        case NID_sm2exchange:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_sm_scheme;
+            ecdh_kdf_md = NID_sm3;
+            break;
+#endif
+#ifndef OPENSSL_NO_SHA
+        case NID_dhSinglePass_stdDH_sha1kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 0;
+            ecdh_kdf_type = NID_sha1;
+            break;
+        case NID_dhSinglePass_stdDH_sha224kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 0;
+            ecdh_kdf_type = NID_sha224;
+            break;
+        case NID_dhSinglePass_stdDH_sha256kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 0;
+            ecdh_kdf_type = NID_sha256;
+            break;
+        case NID_dhSinglePass_stdDH_sha384kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 0;
+            ecdh_kdf_type = NID_sha384;
+            break;
+        case NID_dhSinglePass_stdDH_sha512kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 0;
+            ecdh_kdf_type = NID_sha512;
+            break;
+        case NID_dhSinglePass_cofactorDH_sha1kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 1;
+            ecdh_kdf_type = NID_sha1;
+            break;
+        case NID_dhSinglePass_cofactorDH_sha224kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 1;
+            ecdh_kdf_type = NID_sha224;
+            break;
+        case NID_dhSinglePass_cofactorDH_sha256kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 1;
+            ecdh_kdf_type = NID_sha256;
+            break;
+        case NID_dhSinglePass_cofactorDH_sha384kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 1;
+            ecdh_kdf_type = NID_sha384;
+            break;
+        case NID_dhSinglePass_cofactorDH_sha512kdf_scheme:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ecdh_cofactor_mode = 1;
+            ecdh_kdf_type = NID_sha512;
+            break;
+#endif
+#ifndef OPENSSL_NO_DH
+        case NID_dhKeyAgreement:
+            pkey_type = EVP_PKEY_DH;
+            break;
+#endif
+        default:
+            return 0;
+    }
+
+    *ppkey_type = pkey_type;
+    *pec_scheme = ec_scheme;
+    *pecdh_cofactor_mode = ecdh_cofactor_mode;
+    *pecdh_kdf_type = ecdh_kdf_type;
+    *pecdh_kdf_md = ecdh_kdf_md;
+    *pecdh_kdf_outlen = ecdh_kdf_outlen;
+    *pecdh_kdf_ukm = ecdh_kdf_ukm;
+    *pecdh_kdf_ukmlen = ecdh_kdf_ukmlen;
+
+    return 1;
+}
+
+JNIEXPORT jbyteArray JNICALL deriveKey(JNIEnv *env, jclass thiz, jstring algor,
+                                       jint outkeylen, jbyteArray peerkey, jbyteArray key) {
+    jbyteArray ret = NULL;
+    const char *alg = NULL;
+    const unsigned char *inbuf = NULL;
+    const unsigned char *keybuf = NULL;
+    unsigned char outbuf[256];
+    int inlen, keylen;
+    size_t outlen = outkeylen;
+    int pkey_type;
+    int ec_scheme;
+    const unsigned char *cpin, *cpkey;
+    EVP_PKEY *peerpkey = NULL;
+    EVP_PKEY *pkey = NULL;
+    EVP_PKEY_CTX *pkctx = NULL;
+
+    int ecdh_cofactor_mode;
+    int ecdh_kdf_type;
+    int ecdh_kdf_md;
+    int ecdh_kdf_outlen;
+    char *ecdh_kdf_ukm;
+    int ecdh_kdf_ukm_len;
+
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("publicKeyEncrypt GetStringUTFChars failed");
+        goto end;
+    }
+    if ((outkeylen <= 0 || outkeylen > sizeof(outbuf))) {
+        LOGE("publicKeyEncrypt outkeylen invalid failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(peerkey, 0))) {
+        LOGE("publicKeyEncrypt GetByteArrayElements failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(peerkey)) <= 0) {
+        LOGE("publicKeyEncrypt GetArrayLength failed");
+        goto end;
+    }
+    if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
+        LOGE("publicKeyEncrypt GetByteArrayElements failed");
+        goto end;
+    }
+    if ((keylen = env->GetArrayLength(key)) <= 0) {
+        LOGE("publicKeyEncrypt GetArrayLength 2 failed");
+        goto end;
+    }
+    cpin = inbuf;
+    cpkey = keybuf;
+
+    if (!get_exch_info(alg, &pkey_type, &ec_scheme,
+                       &ecdh_cofactor_mode, &ecdh_kdf_type, &ecdh_kdf_md, &ecdh_kdf_outlen,
+                       &ecdh_kdf_ukm, &ecdh_kdf_ukm_len)) {
+        LOGE("publicKeyEncrypt get_exch_info failed");
+        goto end;
+    }
+
+    if (!(peerpkey = d2i_PUBKEY(NULL, &cpin, (long) inlen))) {
+        LOGE("publicKeyEncrypt d2i_PUBKEY failed");
+        goto end;
+    }
+    if (EVP_PKEY_id(peerpkey) != pkey_type) {
+        LOGE("publicKeyEncrypt EVP_PKEY_id failed");
+        goto end;
+    }
+    if (!(pkey = d2i_PrivateKey(pkey_type, NULL, &cpkey, (long) keylen))) {
+        LOGE("publicKeyEncrypt d2i_PrivateKey failed");
+        goto end;
+    }
+    if (!(pkctx = EVP_PKEY_CTX_new(pkey, NULL))) {
+        LOGE("publicKeyEncrypt EVP_PKEY_CTX_new failed");
+        goto end;
+    }
+    if (EVP_PKEY_derive_init(pkctx) <= 0) {
+        LOGE("publicKeyEncrypt EVP_PKEY_derive_init failed");
+        goto end;
+    }
+
+    if (pkey_type == EVP_PKEY_EC) {
+        if (!EVP_PKEY_CTX_set_ec_scheme(pkctx, ec_scheme)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ec_scheme failed");
+            goto end;
+        }
+    }
+    if (ec_scheme == NID_secg_scheme) {
+        if (!EVP_PKEY_CTX_set_ecdh_cofactor_mode(pkctx, ecdh_cofactor_mode)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ecdh_cofactor_mode failed");
+            goto end;
+        }
+        if (!EVP_PKEY_CTX_set_ecdh_kdf_type(pkctx, ecdh_kdf_type)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ecdh_kdf_type failed");
+            goto end;
+        }
+        if (!EVP_PKEY_CTX_set_ecdh_kdf_md(pkctx, EVP_get_digestbynid(ecdh_kdf_md))) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ecdh_kdf_md failed");
+            goto end;
+        }
+        if (!EVP_PKEY_CTX_set_ecdh_kdf_outlen(pkctx, ecdh_kdf_outlen)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ecdh_kdf_outlen failed");
+            goto end;
+        }
+        if (!EVP_PKEY_CTX_set0_ecdh_kdf_ukm(pkctx, ecdh_kdf_ukm, ecdh_kdf_ukm_len)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set0_ecdh_kdf_ukm failed");
+            goto end;
+        }
+    } else if (ec_scheme == NID_sm_scheme) {
+    }
+
+    if (EVP_PKEY_derive_set_peer(pkctx, peerpkey) <= 0) {
+        LOGE("publicKeyEncrypt EVP_PKEY_derive_set_peer failed");
+        goto end;
+    }
+    if (EVP_PKEY_derive(pkctx, outbuf, &outlen) <= 0) {
+        LOGE("publicKeyEncrypt EVP_PKEY_derive failed");
+        goto end;
+    }
+
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("publicKeyEncrypt NewByteArray failed");
+        goto end;
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (inbuf) env->ReleaseByteArrayElements(peerkey, (jbyte *) inbuf, JNI_ABORT);
+    if (keybuf) env->ReleaseByteArrayElements(key, (jbyte *) keybuf, JNI_ABORT);
+    EVP_PKEY_free(peerpkey);
+    EVP_PKEY_free(pkey);
+    EVP_PKEY_CTX_free(pkctx);
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -1371,7 +1609,7 @@ static JNINativeMethod methods[] = {
         {"verify",                  "(Ljava/lang/String;[B[B[B)I",  (void *) verify},
         {"publicKeyEncrypt",        "(Ljava/lang/String;[B[B)[B",   (void *) publicKeyEncrypt},
         {"publicKeyDecrypt",        "(Ljava/lang/String;[B[B)[B",   (void *) publicKeyDecrypt},
-//        {"deriveKey",               "(Ljava/lang/String;I[B[B)[B",             (void *) deriveKey},
+        {"deriveKey",               "(Ljava/lang/String;I[B[B)[B",  (void *) deriveKey},
 //        {"getErrorStrings",         "()[Ljava/lang/String;",                   (void *) getErrorStrings},
 };
 
