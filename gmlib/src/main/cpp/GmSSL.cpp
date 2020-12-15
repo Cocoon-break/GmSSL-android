@@ -241,6 +241,61 @@ JNIEXPORT jobjectArray JNICALL getSignAlgorithms(JNIEnv *env, jclass thiz) {
     return ret;
 }
 
+int pke_nids[] = {
+#ifndef OPENSSL_NO_RSA
+        NID_rsaesOaep,
+#endif
+#ifndef OPENSSL_NO_ECIES
+        NID_ecies_recommendedParameters,
+        NID_ecies_specifiedParameters,
+# ifndef OPENSSL_NO_SHA
+        NID_ecies_with_x9_63_sha1_xor_hmac,
+        NID_ecies_with_x9_63_sha256_xor_hmac,
+        NID_ecies_with_x9_63_sha512_xor_hmac,
+        NID_ecies_with_x9_63_sha1_aes128_cbc_hmac,
+        NID_ecies_with_x9_63_sha256_aes128_cbc_hmac,
+        NID_ecies_with_x9_63_sha512_aes256_cbc_hmac,
+        NID_ecies_with_x9_63_sha256_aes128_ctr_hmac,
+        NID_ecies_with_x9_63_sha512_aes256_ctr_hmac,
+        NID_ecies_with_x9_63_sha256_aes128_cbc_hmac_half,
+        NID_ecies_with_x9_63_sha512_aes256_cbc_hmac_half,
+        NID_ecies_with_x9_63_sha256_aes128_ctr_hmac_half,
+        NID_ecies_with_x9_63_sha512_aes256_ctr_hmac_half,
+        NID_ecies_with_x9_63_sha1_aes128_cbc_cmac,
+        NID_ecies_with_x9_63_sha256_aes128_cbc_cmac,
+        NID_ecies_with_x9_63_sha512_aes256_cbc_cmac,
+        NID_ecies_with_x9_63_sha256_aes128_ctr_cmac,
+        NID_ecies_with_x9_63_sha512_aes256_ctr_cmac,
+# endif
+#endif
+#ifndef OPENSSL_NO_SM2
+        NID_sm2encrypt_with_sm3,
+# ifndef OPENSSL_NO_SHA
+        NID_sm2encrypt_with_sha1,
+        NID_sm2encrypt_with_sha256,
+        NID_sm2encrypt_with_sha512,
+# endif
+#endif
+};
+
+JNIEXPORT jobjectArray JNICALL getPublicKeyEncryptions(JNIEnv *env, jclass thiz) {
+    jobjectArray ret = NULL;
+    int i;
+
+    if (!(ret = env->NewObjectArray(OSSL_NELEM(pke_nids),
+                                    env->FindClass("java/lang/String"),
+                                    env->NewStringUTF("")))) {
+        LOGE("getPublicKeyEncryptions NewObjectArray failed");
+        return NULL;
+    }
+
+    for (i = 0; i < OSSL_NELEM(pke_nids); i++) {
+        env->SetObjectArrayElement(ret, i, env->NewStringUTF(OBJ_nid2sn(pke_nids[i])));
+    }
+
+    return ret;
+}
+
 
 /** jni中定义的JNINativeMethod
  * typedef struct {
@@ -250,12 +305,12 @@ JNIEXPORT jobjectArray JNICALL getSignAlgorithms(JNIEnv *env, jclass thiz) {
 } JNINativeMethod;
  */
 static JNINativeMethod methods[] = {
-        {"getVersions",       "()[Ljava/lang/String;", (void *) getVersions},
-        {"getCiphers",        "()[Ljava/lang/String;", (void *) getCiphers},
-        {"getDigests",        "()[Ljava/lang/String;", (void *) getDigests},
-        {"getMacs",           "()[Ljava/lang/String;", (void *) getMacs},
-        {"getSignAlgorithms", "()[Ljava/lang/String;", (void *) getSignAlgorithms},
-//        {"getPublicKeyEncryptions", "()[Ljava/lang/String;",                   (void *) getPublicKeyEncryptions},
+        {"getVersions",             "()[Ljava/lang/String;", (void *) getVersions},
+        {"getCiphers",              "()[Ljava/lang/String;", (void *) getCiphers},
+        {"getDigests",              "()[Ljava/lang/String;", (void *) getDigests},
+        {"getMacs",                 "()[Ljava/lang/String;", (void *) getMacs},
+        {"getSignAlgorithms",       "()[Ljava/lang/String;", (void *) getSignAlgorithms},
+        {"getPublicKeyEncryptions", "()[Ljava/lang/String;", (void *) getPublicKeyEncryptions},
 //        {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;",                   (void *) getDeriveKeyAlgorithms},
 //        {"generateRandom",          "(I)[B",                                   (void *) generateRandom},
 //        {"getCipherIVLength",       "(Ljava/lang/String;)I",                   (void *) getCipherIVLength},

@@ -11,7 +11,7 @@ public class GmSSL {
 //
     public native String[] getSignAlgorithms();
 //
-//    public native String[] getPublicKeyEncryptions();
+    public native String[] getPublicKeyEncryptions();
 //
 //    public native String[] getDeriveKeyAlgorithms();
 //
