@@ -145,5 +145,10 @@ public class MainActivity extends AppCompatActivity {
         int vret = gmSSL.verify("sm2sign", dgst, sign, sm2PublicKey);
         Log.d(TAG, "sign--->" + vret);
 
+        byte[] sm2Ciphertext = gmSSL.publicKeyEncrypt("sm2encrypt-with-sm3", dgst, sm2PublicKey);
+        for (int i = 0; i < sm2Ciphertext.length; i++) {
+            Log.d(TAG, "publicKeyEncrypt--->" + "sm2Ciphertext[" + i + "] = " + sm2Ciphertext[i]);
+        }
+
     }
 }

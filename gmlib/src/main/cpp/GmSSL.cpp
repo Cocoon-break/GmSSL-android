@@ -1062,6 +1062,187 @@ JNIEXPORT jint JNICALL verify(JNIEnv *env, jclass thiz,
     return ret;
 }
 
+static int get_pke_info(const char *alg, int *ppkey_type,
+                        int *pec_scheme, int *pec_encrypt_param) {
+    int pkey_type = 0;
+    int ec_scheme = 0;
+    int ec_encrypt_param = 0;
+
+    switch (OBJ_txt2nid(alg)) {
+#ifndef OPENSSL_NO_RSA
+        case NID_rsaesOaep:
+            pkey_type = EVP_PKEY_RSA;
+            break;
+#endif
+#ifndef OPENSSL_NO_ECIES
+        case NID_ecies_recommendedParameters:
+        case NID_ecies_specifiedParameters:
+# ifndef OPENSSL_NO_SHA
+        case NID_ecies_with_x9_63_sha1_xor_hmac:
+        case NID_ecies_with_x9_63_sha256_xor_hmac:
+        case NID_ecies_with_x9_63_sha512_xor_hmac:
+        case NID_ecies_with_x9_63_sha1_aes128_cbc_hmac:
+        case NID_ecies_with_x9_63_sha256_aes128_cbc_hmac:
+        case NID_ecies_with_x9_63_sha512_aes256_cbc_hmac:
+        case NID_ecies_with_x9_63_sha256_aes128_ctr_hmac:
+        case NID_ecies_with_x9_63_sha512_aes256_ctr_hmac:
+        case NID_ecies_with_x9_63_sha256_aes128_cbc_hmac_half:
+        case NID_ecies_with_x9_63_sha512_aes256_cbc_hmac_half:
+        case NID_ecies_with_x9_63_sha256_aes128_ctr_hmac_half:
+        case NID_ecies_with_x9_63_sha512_aes256_ctr_hmac_half:
+        case NID_ecies_with_x9_63_sha1_aes128_cbc_cmac:
+        case NID_ecies_with_x9_63_sha256_aes128_cbc_cmac:
+        case NID_ecies_with_x9_63_sha512_aes256_cbc_cmac:
+        case NID_ecies_with_x9_63_sha256_aes128_ctr_cmac:
+        case NID_ecies_with_x9_63_sha512_aes256_ctr_cmac:
+# endif
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            ec_encrypt_param = OBJ_txt2nid(alg);
+            break;
+#endif
+#ifndef OPENSSL_NO_SM2
+        case NID_sm2encrypt_with_sm3:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_sm_scheme;
+            ec_encrypt_param = NID_sm3;
+            break;
+# ifndef OPENSSL_NO_SHA
+        case NID_sm2encrypt_with_sha1:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_sm_scheme;
+            ec_encrypt_param = NID_sha1;
+            break;
+        case NID_sm2encrypt_with_sha256:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_sm_scheme;
+            ec_encrypt_param = NID_sha256;
+            break;
+        case NID_sm2encrypt_with_sha512:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_sm_scheme;
+            ec_encrypt_param = NID_sha512;
+            break;
+# endif
+#endif
+        default:
+            return 0;
+    }
+
+    *ppkey_type = pkey_type;
+    *pec_scheme = ec_scheme;
+    *pec_encrypt_param = ec_encrypt_param;
+
+    return 1;
+}
+
+JNIEXPORT jbyteArray JNICALL publicKeyEncrypt(JNIEnv *env, jclass thiz, jstring algor,
+                                              jbyteArray in, jbyteArray key) {
+    jbyteArray ret = NULL;
+    const char *alg = NULL;
+    const unsigned char *inbuf = NULL;
+    const unsigned char *keybuf = NULL;
+    void *outbuf = NULL;
+    int inlen, keylen;
+    size_t outlen;
+    int pkey_type = NID_undef;
+    int ec_scheme = NID_undef;
+    int ec_encrypt_param = NID_undef;
+    const unsigned char *cp;
+    EVP_PKEY *pkey = NULL;
+    EVP_PKEY_CTX *pkctx = NULL;
+
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("publicKeyEncrypt GetStringUTFChars failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
+        LOGE("publicKeyEncrypt GetByteArrayElements failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(in)) <= 0) {
+        LOGE("publicKeyEncrypt GetArrayLength <= 0 failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(in)) > 256) {
+        LOGE("publicKeyEncrypt GetArrayLength > 256 failed");
+        goto end;
+    }
+    if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
+        LOGE("publicKeyEncrypt GetByteArrayElements 2 failed");
+        goto end;
+    }
+    if ((keylen = env->GetArrayLength(key)) <= 0) {
+        LOGE("publicKeyEncrypt GetArrayLength 3 failed");
+        goto end;
+    }
+    cp = keybuf;
+    outlen = inlen + 1024;
+
+    if (!get_pke_info(alg, &pkey_type, &ec_scheme, &ec_encrypt_param)) {
+        LOGE("publicKeyEncrypt get_pke_info failed");
+        goto end;
+    }
+
+    if (!(outbuf = OPENSSL_malloc(outlen))) {
+        LOGE("publicKeyEncrypt OPENSSL_malloc failed");
+        goto end;
+    }
+    if (!(pkey = d2i_PUBKEY(NULL, &cp, (long) keylen))) {
+        LOGE("publicKeyEncrypt d2i_PUBKEY failed");
+        goto end;
+    }
+    if (EVP_PKEY_id(pkey) != pkey_type) {
+        LOGE("publicKeyEncrypt EVP_PKEY_id failed");
+        goto end;
+    }
+    if (!(pkctx = EVP_PKEY_CTX_new(pkey, NULL))) {
+        LOGE("publicKeyEncrypt EVP_PKEY_CTX_new failed");
+        goto end;
+    }
+
+    if (EVP_PKEY_encrypt_init(pkctx) <= 0) {
+        LOGE("publicKeyEncrypt EVP_PKEY_encrypt_init failed");
+        goto end;
+    }
+
+    if (pkey_type == EVP_PKEY_EC) {
+#if !defined(OPENSSL_NO_ECIES) || !defined(OPENSSL_NO_SM2)
+        if (!EVP_PKEY_CTX_set_ec_scheme(pkctx, ec_scheme)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ec_scheme failed");
+            goto end;
+        }
+        if (!EVP_PKEY_CTX_set_ec_encrypt_param(pkctx, ec_encrypt_param)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ec_encrypt_param failed");
+            goto end;
+        }
+#endif
+    }
+
+    if (EVP_PKEY_encrypt(pkctx, (unsigned char *) outbuf, &outlen, inbuf, inlen) <= 0) {
+        LOGE("publicKeyEncrypt EVP_PKEY_encrypt failed");
+        goto end;
+    }
+
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("publicKeyEncrypt NewByteArray failed");
+        goto end;
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (inbuf) env->ReleaseByteArrayElements(in, (jbyte *) inbuf, JNI_ABORT);
+    if (keybuf) env->ReleaseByteArrayElements(key, (jbyte *) keybuf, JNI_ABORT);
+    OPENSSL_free(outbuf);
+    EVP_PKEY_free(pkey);
+    EVP_PKEY_CTX_free(pkctx);
+    return ret;
+
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -1090,7 +1271,7 @@ static JNINativeMethod methods[] = {
         {"mac",                     "(Ljava/lang/String;[B[B)[B",   (void *) mac},
         {"sign",                    "(Ljava/lang/String;[B[B)[B",   (void *) sign},
         {"verify",                  "(Ljava/lang/String;[B[B[B)I",  (void *) verify},
-//        {"publicKeyEncrypt",        "(Ljava/lang/String;[B[B)[B",              (void *) publicKeyEncrypt},
+        {"publicKeyEncrypt",        "(Ljava/lang/String;[B[B)[B",   (void *) publicKeyEncrypt},
 //        {"publicKeyDecrypt",        "(Ljava/lang/String;[B[B)[B",              (void *) publicKeyDecrypt},
 //        {"deriveKey",               "(Ljava/lang/String;I[B[B)[B",             (void *) deriveKey},
 //        {"getErrorStrings",         "()[Ljava/lang/String;",                   (void *) getErrorStrings},
