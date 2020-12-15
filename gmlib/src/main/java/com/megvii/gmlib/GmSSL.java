@@ -20,8 +20,8 @@ public class GmSSL {
     public native int getCipherIVLength(String cipher);
 
     public native int getCipherKeyLength(String cipher);
-//
-//    public native int getCipherBlockSize(String cipher);
+
+    public native int getCipherBlockSize(String cipher);
 //
 //    public native byte[] symmetricEncrypt(String cipher, byte[] in, byte[] key, byte[] iv);
 //
