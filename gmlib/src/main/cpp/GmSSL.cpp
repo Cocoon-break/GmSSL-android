@@ -79,8 +79,11 @@
 //#include "GmSSL.h"
 
 #define GMSSL_JNI_VERSION    "GmSSL-JNI MEGVII API/1.1 2020-12-15"
+#define LOG_TAG "MEGVII_GMSSL_JNI"
 
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "GMSSL_JNI", __VA_ARGS__)
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
 #define NUM_ARRAY_ELEMENTS(p) ((int) sizeof(p) / sizeof(p[0]))
 
 
@@ -90,7 +93,7 @@ JNIEXPORT jobjectArray JNICALL getVersions(JNIEnv *env, jclass thiz) {
 
     if (!(ret = env->NewObjectArray(7, env->FindClass("java/lang/String"),
                                     env->NewStringUTF("")))) {
-        LOGD("getVersions NewObjectArray fail");
+        LOGE("getVersions NewObjectArray failed");
         return NULL;
     }
 
@@ -103,6 +106,41 @@ JNIEXPORT jobjectArray JNICALL getVersions(JNIEnv *env, jclass thiz) {
     return ret;
 }
 
+static void list_cipher_fn(const EVP_CIPHER *c,
+                           const char *from, const char *to, void *argv) {
+    STACK_OF(OPENSSL_CSTRING) *sk = static_cast<stack_st_OPENSSL_CSTRING *>(argv);
+    if (c) {
+        sk_OPENSSL_CSTRING_push(sk, EVP_CIPHER_name(c));
+    } else {
+        sk_OPENSSL_CSTRING_push(sk, from);
+    }
+}
+
+JNIEXPORT jobjectArray JNICALL getCiphers(JNIEnv *env, jclass thiz) {
+    jobjectArray ret = NULL;
+    STACK_OF(OPENSSL_CSTRING) *sk = NULL;
+    int i;
+
+    if (!(sk = sk_OPENSSL_CSTRING_new_null())) {
+        LOGE("getCiphers sk_OPENSSL_CSTRING_new_null() failed");
+        goto end;
+    }
+
+    EVP_CIPHER_do_all_sorted(list_cipher_fn, sk);
+
+    if (!(ret = env->NewObjectArray(sk_OPENSSL_CSTRING_num(sk), env->FindClass("java/lang/String"),
+                                    env->NewStringUTF("")))) {
+        LOGE("getCiphers NewObjectArray failed");
+        goto end;
+    }
+
+    for (i = 0; i < sk_OPENSSL_CSTRING_num(sk); i++) {
+        env->SetObjectArrayElement(ret, i, env->NewStringUTF(sk_OPENSSL_CSTRING_value(sk, i)));
+    }
+    end:
+    sk_OPENSSL_CSTRING_free(sk);
+    return ret;
+}
 
 /** jni中定义的JNINativeMethod
  * typedef struct {
@@ -113,7 +151,7 @@ JNIEXPORT jobjectArray JNICALL getVersions(JNIEnv *env, jclass thiz) {
  */
 static JNINativeMethod methods[] = {
         {"getVersions", "()[Ljava/lang/String;", (void *) getVersions},
-//        {"getCiphers",              "()[Ljava/lang/String;",                   (void *) getCiphers},
+        {"getCiphers",  "()[Ljava/lang/String;", (void *) getCiphers},
 //        {"getDigests",              "()[Ljava/lang/String;",                   (void *) getDigests},
 //        {"getMacs",                 "()[Ljava/lang/String;",                   (void *) getMacs},
 //        {"getSignAlgorithms",       "()[Ljava/lang/String;",                   (void *) getSignAlgorithms},

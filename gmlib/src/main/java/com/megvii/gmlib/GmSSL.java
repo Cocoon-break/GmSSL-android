@@ -3,7 +3,7 @@ package com.megvii.gmlib;
 public class GmSSL {
     public native String[] getVersions();
 
-//    public native String[] getCiphers();
+    public native String[] getCiphers();
 //
 //    public native String[] getDigests();
 //

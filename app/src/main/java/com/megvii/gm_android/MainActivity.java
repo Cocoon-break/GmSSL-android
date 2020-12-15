@@ -16,10 +16,15 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         GmSSL gmSSL = new GmSSL();
-        String[] versions = gmSSL.getVersions();
-        for (int i = 0; i < versions.length; i++) {
-            Log.d(TAG, versions[i]);
+        // getVersions
+        for (String version : gmSSL.getVersions()) {
+            Log.d(TAG, "version--->" + version);
         }
+        // getCiphers
+        for (String cipher : gmSSL.getCiphers()) {
+            Log.d(TAG, "cipher--->" + cipher);
+        }
+
 
     }
 }
