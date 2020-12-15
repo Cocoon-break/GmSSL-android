@@ -14,8 +14,8 @@ public class GmSSL {
     public native String[] getPublicKeyEncryptions();
 
     public native String[] getDeriveKeyAlgorithms();
-//
-//    public native byte[] generateRandom(int length);
+
+    public native byte[] generateRandom(int length);
 //
 //    public native int getCipherIVLength(String cipher);
 //

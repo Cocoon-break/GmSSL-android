@@ -334,6 +334,36 @@ JNIEXPORT jobjectArray JNICALL getDeriveKeyAlgorithms(JNIEnv *env, jclass thiz) 
     return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL generateRandom(JNIEnv *env, jclass clazz, jint outlen) {
+    jbyteArray ret = NULL;
+    void *outbuf = NULL;
+
+    if (outlen <= 0 || outlen >= INT_MAX) {
+        LOGE("generateRandom outlen invalid");
+        return NULL;
+    }
+
+    if (!(outbuf = OPENSSL_malloc(outlen))) {
+        LOGE("generateRandom OPENSSL_malloc failed");
+        goto end;
+    }
+
+    if (!RAND_bytes((unsigned char *) outbuf, outlen)) {
+        LOGE("generateRandom RAND_bytes failed");
+        goto end;
+    }
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("generateRandom NewByteArray failed");
+        goto end;
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    OPENSSL_free(outbuf);
+    return ret;
+}
+
 
 /** jni中定义的JNINativeMethod
  * typedef struct {
@@ -350,7 +380,7 @@ static JNINativeMethod methods[] = {
         {"getSignAlgorithms",       "()[Ljava/lang/String;", (void *) getSignAlgorithms},
         {"getPublicKeyEncryptions", "()[Ljava/lang/String;", (void *) getPublicKeyEncryptions},
         {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;", (void *) getDeriveKeyAlgorithms},
-//        {"generateRandom",          "(I)[B",                                   (void *) generateRandom},
+        {"generateRandom",          "(I)[B",                 (void *) generateRandom},
 //        {"getCipherIVLength",       "(Ljava/lang/String;)I",                   (void *) getCipherIVLength},
 //        {"getCipherKeyLength",      "(Ljava/lang/String;)I",                   (void *) getCipherKeyLength},
 //        {"getCipherBlockSize",      "(Ljava/lang/String;)I",                   (void *) getCipherBlockSize},

@@ -46,5 +46,10 @@ public class MainActivity extends AppCompatActivity {
         for (String deriveKeyAlgorithms : gmSSL.getDeriveKeyAlgorithms()) {
             Log.d(TAG, "deriveKeyAlgorithms--->" + deriveKeyAlgorithms);
         }
+
+        byte[] data = gmSSL.generateRandom(20);
+        for (int i = 0; i < data.length; i++) {
+            Log.d(TAG, "data[" + i + "] = " + data[i]);
+        }
     }
 }
