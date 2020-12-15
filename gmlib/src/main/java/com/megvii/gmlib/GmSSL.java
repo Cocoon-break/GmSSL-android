@@ -9,7 +9,7 @@ public class GmSSL {
 //
     public native String[] getMacs();
 //
-//    public native String[] getSignAlgorithms();
+    public native String[] getSignAlgorithms();
 //
 //    public native String[] getPublicKeyEncryptions();
 //

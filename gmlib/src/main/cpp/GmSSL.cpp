@@ -186,8 +186,7 @@ char *mac_algors[] = {
         "HMAC-SHA512",
 };
 
-JNIEXPORT jobjectArray JNICALL getMacs(
-        JNIEnv *env, jclass thiz) {
+JNIEXPORT jobjectArray JNICALL getMacs(JNIEnv *env, jclass thiz) {
     jobjectArray ret = NULL;
     int i;
     if (!(ret = env->NewObjectArray(OSSL_NELEM(mac_algors),
@@ -204,6 +203,45 @@ JNIEXPORT jobjectArray JNICALL getMacs(
     return ret;
 }
 
+int sign_nids[] = {
+#ifndef OPENSSL_NO_SM2
+        NID_sm2sign,
+#endif
+        NID_ecdsa_with_Recommended,
+#ifndef OPENSSL_NO_SHA
+        NID_ecdsa_with_SHA1,
+        NID_ecdsa_with_SHA256,
+        NID_ecdsa_with_SHA512,
+# ifndef OPENSSL_NO_RSA
+        NID_sha1WithRSAEncryption,
+        NID_sha256WithRSAEncryption,
+        NID_sha512WithRSAEncryption,
+# endif
+# ifndef OPENSSL_NO_DSA
+        NID_dsaWithSHA1,
+# endif
+#endif
+};
+
+JNIEXPORT jobjectArray JNICALL getSignAlgorithms(JNIEnv *env, jclass thiz) {
+    jobjectArray ret = NULL;
+    int num_algors = sizeof(sign_nids) / sizeof(sign_nids[0]);
+    int i;
+    if (!(ret = env->NewObjectArray(OSSL_NELEM(sign_nids),
+                                    env->FindClass("java/lang/String"),
+                                    env->NewStringUTF("")))) {
+        LOGE("getSignAlgorithms NewObjectArray failed");
+        return NULL;
+    }
+
+    for (i = 0; i < num_algors; i++) {
+        env->SetObjectArrayElement(ret, i, env->NewStringUTF(OBJ_nid2sn(sign_nids[i])));
+    }
+
+    return ret;
+}
+
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -212,11 +250,11 @@ JNIEXPORT jobjectArray JNICALL getMacs(
 } JNINativeMethod;
  */
 static JNINativeMethod methods[] = {
-        {"getVersions", "()[Ljava/lang/String;", (void *) getVersions},
-        {"getCiphers",  "()[Ljava/lang/String;", (void *) getCiphers},
-        {"getDigests",  "()[Ljava/lang/String;", (void *) getDigests},
-        {"getMacs",     "()[Ljava/lang/String;", (void *) getMacs},
-//        {"getSignAlgorithms",       "()[Ljava/lang/String;",                   (void *) getSignAlgorithms},
+        {"getVersions",       "()[Ljava/lang/String;", (void *) getVersions},
+        {"getCiphers",        "()[Ljava/lang/String;", (void *) getCiphers},
+        {"getDigests",        "()[Ljava/lang/String;", (void *) getDigests},
+        {"getMacs",           "()[Ljava/lang/String;", (void *) getMacs},
+        {"getSignAlgorithms", "()[Ljava/lang/String;", (void *) getSignAlgorithms},
 //        {"getPublicKeyEncryptions", "()[Ljava/lang/String;",                   (void *) getPublicKeyEncryptions},
 //        {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;",                   (void *) getDeriveKeyAlgorithms},
 //        {"generateRandom",          "(I)[B",                                   (void *) generateRandom},

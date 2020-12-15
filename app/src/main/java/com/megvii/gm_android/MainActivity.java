@@ -32,5 +32,9 @@ public class MainActivity extends AppCompatActivity {
         for (String mac : gmSSL.getMacs()) {
             Log.d(TAG, "mac--->" + mac);
         }
+        // getSignAlgorithms
+        for (String signAlgorithm : gmSSL.getSignAlgorithms()) {
+            Log.d(TAG, "signAlgorithm--->" + signAlgorithm);
+        }
     }
 }
