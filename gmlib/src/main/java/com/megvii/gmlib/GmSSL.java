@@ -4,16 +4,16 @@ public class GmSSL {
     public native String[] getVersions();
 
     public native String[] getCiphers();
-//
+
     public native String[] getDigests();
-//
+
     public native String[] getMacs();
-//
+
     public native String[] getSignAlgorithms();
-//
+
     public native String[] getPublicKeyEncryptions();
-//
-//    public native String[] getDeriveKeyAlgorithms();
+
+    public native String[] getDeriveKeyAlgorithms();
 //
 //    public native byte[] generateRandom(int length);
 //

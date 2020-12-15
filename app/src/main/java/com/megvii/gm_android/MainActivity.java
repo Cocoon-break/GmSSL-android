@@ -34,12 +34,17 @@ public class MainActivity extends AppCompatActivity {
         }
         // getSignAlgorithms
         for (String signAlgorithm : gmSSL.getSignAlgorithms()) {
-            Log.d(TAG, "signAlgorithm--->" + signAlgorithm);
+            Log.d(TAG, "signAlgorithms--->" + signAlgorithm);
         }
 
         // getPublicKeyEncryptions
         for (String publicKeyEncryption : gmSSL.getPublicKeyEncryptions()) {
             Log.d(TAG, "publicKeyEncryption--->" + publicKeyEncryption);
+        }
+
+        // getDeriveKeyAlgorithms
+        for (String deriveKeyAlgorithms : gmSSL.getDeriveKeyAlgorithms()) {
+            Log.d(TAG, "deriveKeyAlgorithms--->" + deriveKeyAlgorithms);
         }
     }
 }

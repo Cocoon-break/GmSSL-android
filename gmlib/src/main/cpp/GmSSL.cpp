@@ -296,6 +296,44 @@ JNIEXPORT jobjectArray JNICALL getPublicKeyEncryptions(JNIEnv *env, jclass thiz)
     return ret;
 }
 
+int exch_nids[] = {
+#ifndef OPENSSL_NO_SM2
+        NID_sm2exchange,
+#endif
+#ifndef OPENSSL_NO_SHA
+        NID_dhSinglePass_stdDH_sha1kdf_scheme,
+        NID_dhSinglePass_stdDH_sha224kdf_scheme,
+        NID_dhSinglePass_stdDH_sha256kdf_scheme,
+        NID_dhSinglePass_stdDH_sha384kdf_scheme,
+        NID_dhSinglePass_stdDH_sha512kdf_scheme,
+        NID_dhSinglePass_cofactorDH_sha1kdf_scheme,
+        NID_dhSinglePass_cofactorDH_sha224kdf_scheme,
+        NID_dhSinglePass_cofactorDH_sha256kdf_scheme,
+        NID_dhSinglePass_cofactorDH_sha384kdf_scheme,
+        NID_dhSinglePass_cofactorDH_sha512kdf_scheme,
+#endif
+#ifndef OPENSSL_NO_DH
+        NID_dhKeyAgreement,
+#endif
+};
+
+JNIEXPORT jobjectArray JNICALL getDeriveKeyAlgorithms(JNIEnv *env, jclass thiz) {
+    jobjectArray ret = NULL;
+    int i;
+
+    if (!(ret = env->NewObjectArray(OSSL_NELEM(exch_nids), env->FindClass("java/lang/String"),
+                                    env->NewStringUTF("")))) {
+        LOGE("getDeriveKeyAlgorithms NewObjectArray failed");
+        return NULL;
+    }
+
+    for (i = 0; i < OSSL_NELEM(exch_nids); i++) {
+        env->SetObjectArrayElement(ret, i, env->NewStringUTF(OBJ_nid2sn(exch_nids[i])));
+    }
+
+    return ret;
+}
+
 
 /** jni中定义的JNINativeMethod
  * typedef struct {
@@ -311,7 +349,7 @@ static JNINativeMethod methods[] = {
         {"getMacs",                 "()[Ljava/lang/String;", (void *) getMacs},
         {"getSignAlgorithms",       "()[Ljava/lang/String;", (void *) getSignAlgorithms},
         {"getPublicKeyEncryptions", "()[Ljava/lang/String;", (void *) getPublicKeyEncryptions},
-//        {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;",                   (void *) getDeriveKeyAlgorithms},
+        {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;", (void *) getDeriveKeyAlgorithms},
 //        {"generateRandom",          "(I)[B",                                   (void *) generateRandom},
 //        {"getCipherIVLength",       "(Ljava/lang/String;)I",                   (void *) getCipherIVLength},
 //        {"getCipherKeyLength",      "(Ljava/lang/String;)I",                   (void *) getCipherKeyLength},
