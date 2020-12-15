@@ -87,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
     private void sm3(GmSSL gmSSL) {
         int digestLen = gmSSL.getDigestLength("SM3");
         Log.d(TAG, "getDigestLength--->" + digestLen);
-
+        int digestBlockSize = gmSSL.getDigestBlockSize("SM3");
+        Log.d(TAG, "getDigestBlockSize--->" + digestBlockSize);
     }
 }

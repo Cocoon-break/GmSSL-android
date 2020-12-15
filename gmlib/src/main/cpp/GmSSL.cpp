@@ -623,6 +623,28 @@ JNIEXPORT jint JNICALL getDigestLength(JNIEnv *env, jclass thiz, jstring algor) 
     return ret;
 }
 
+JNIEXPORT jint JNICALL getDigestBlockSize(JNIEnv *env, jclass thiz, jstring algor) {
+    jint ret = -1;
+    const char *alg = NULL;
+    const EVP_MD *md;
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("getDigestBlockSize GetStringUTFChars failed");
+        goto end;
+    }
+
+    if (!(md = EVP_get_digestbyname(alg))) {
+        LOGE("getDigestBlockSize EVP_get_digestbyname failed");
+        goto end;
+    }
+
+    ret = EVP_MD_block_size(md);
+
+    end:
+    env->ReleaseStringUTFChars(algor, alg);
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -645,7 +667,7 @@ static JNINativeMethod methods[] = {
         {"symmetricEncrypt",        "(Ljava/lang/String;[B[B[B)[B", (void *) symmetricEncrypt},
         {"symmetricDecrypt",        "(Ljava/lang/String;[B[B[B)[B", (void *) symmetricDecrypt},
         {"getDigestLength",         "(Ljava/lang/String;)I",        (void *) getDigestLength},
-//        {"getDigestBlockSize",      "(Ljava/lang/String;)I",                   (void *) getDigestBlockSize},
+        {"getDigestBlockSize",      "(Ljava/lang/String;)I",        (void *) getDigestBlockSize},
 //        {"digest",                  "(Ljava/lang/String;[B)[B",                (void *) digest},
 //        {"getMacLength",            "(Ljava/lang/String;)[Ljava/lang/String;", (void *) getMacLength},
 //        {"mac",                     "(Ljava/lang/String;[B[B)[B",              (void *) mac},
