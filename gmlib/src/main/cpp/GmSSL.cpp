@@ -787,6 +787,173 @@ JNIEXPORT jbyteArray JNICALL mac(JNIEnv *env, jclass thiz,
     return ret;
 }
 
+static int get_sign_info(const char *alg, int *ppkey_type,
+                         const EVP_MD **pmd, int *pec_scheme) {
+    int pkey_type;
+    const EVP_MD *md = NULL;
+    int ec_scheme = -1;
+
+    switch (OBJ_txt2nid(alg)) {
+#ifndef OPENSSL_NO_SM2
+        case NID_sm2sign:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_sm_scheme;
+            break;
+#endif
+        case NID_ecdsa_with_Recommended:
+            pkey_type = EVP_PKEY_EC;
+            ec_scheme = NID_secg_scheme;
+            break;
+#ifndef OPENSSL_NO_SHA
+        case NID_ecdsa_with_SHA1:
+            pkey_type = EVP_PKEY_EC;
+            md = EVP_sha1();
+            ec_scheme = NID_secg_scheme;
+            break;
+        case NID_ecdsa_with_SHA256:
+            pkey_type = EVP_PKEY_EC;
+            md = EVP_sha256();
+            ec_scheme = NID_secg_scheme;
+            break;
+        case NID_ecdsa_with_SHA512:
+            pkey_type = EVP_PKEY_EC;
+            md = EVP_sha512();
+            ec_scheme = NID_secg_scheme;
+            break;
+# ifndef OPENSSL_NO_RSA
+        case NID_sha1WithRSAEncryption:
+            pkey_type = EVP_PKEY_RSA;
+            md = EVP_sha1();
+            break;
+        case NID_sha256WithRSAEncryption:
+            pkey_type = EVP_PKEY_RSA;
+            md = EVP_sha256();
+            break;
+        case NID_sha512WithRSAEncryption:
+            pkey_type = EVP_PKEY_RSA;
+            md = EVP_sha512();
+            break;
+# endif
+# ifndef OPENSSL_NO_DSA
+        case NID_dsaWithSHA1:
+            pkey_type = EVP_PKEY_DSA;
+            md = EVP_sha1();
+            break;
+# endif
+#endif
+        default:
+            return 0;
+    }
+
+    *ppkey_type = pkey_type;
+    *pmd = md;
+    *pec_scheme = ec_scheme;
+
+    return 1;
+}
+
+
+JNIEXPORT jbyteArray JNICALL sign(JNIEnv *env, jclass thiz,
+                                  jstring algor, jbyteArray in, jbyteArray key) {
+    jbyteArray ret = NULL;
+    const char *alg = NULL;
+    const unsigned char *inbuf = NULL;
+    const unsigned char *keybuf = NULL;
+    unsigned char outbuf[1024];
+    int inlen, keylen;
+    size_t outlen = sizeof(outbuf);
+    int pkey_type = 0;
+    const EVP_MD *md = NULL;
+    int ec_scheme = -1;
+    const unsigned char *cp;
+    EVP_PKEY *pkey = NULL;
+    EVP_PKEY_CTX *pkctx = NULL;
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("sign GetStringUTFChars failed");
+        goto end;
+    }
+    if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
+        LOGE("sign GetByteArrayElements failed");
+        goto end;
+    }
+    if ((keylen = env->GetArrayLength(key)) <= 0) {
+        LOGE("sign GetArrayLength failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
+        LOGE("sign GetByteArrayElements 2 failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(in)) <= 0) {
+        LOGE("sign GetArrayLength 2 failed");
+        goto end;
+    }
+
+    if (!get_sign_info(alg, &pkey_type, &md, &ec_scheme)) {
+        LOGE("sign get_sign_info failed");
+        goto end;
+    }
+
+    cp = keybuf;
+    if (!(pkey = d2i_PrivateKey(pkey_type, NULL, &cp, keylen))) {
+        LOGE("sign d2i_PrivateKey failed");
+        goto end;
+    }
+    if (!(pkctx = EVP_PKEY_CTX_new(pkey, NULL))) {
+        LOGE("sign EVP_PKEY_CTX_new failed");
+        goto end;
+    }
+    if (EVP_PKEY_sign_init(pkctx) <= 0) {
+        LOGE("sign EVP_PKEY_sign_init failed");
+        goto end;
+    }
+
+    if (md) {
+        if (!EVP_PKEY_CTX_set_signature_md(pkctx, md)) {
+            LOGE("sign EVP_PKEY_CTX_set_signature_md failed");
+            goto end;
+        }
+    }
+    if (pkey_type == EVP_PKEY_RSA) {
+#ifndef OPENSSL_NO_RSA
+        if (!EVP_PKEY_CTX_set_rsa_padding(pkctx, RSA_PKCS1_PSS_PADDING)) {
+            LOGE("sign EVP_PKEY_CTX_set_rsa_padding failed");
+            goto end;
+        }
+#endif
+    } else if (pkey_type == EVP_PKEY_EC) {
+#ifndef OPENSSL_NO_SM2
+        if (!EVP_PKEY_CTX_set_ec_scheme(pkctx, OBJ_txt2nid(alg) == NID_sm2sign ?
+                                               NID_sm_scheme : NID_secg_scheme)) {
+            LOGE("sign EVP_PKEY_CTX_set_ec_scheme failed");
+            goto end;
+        }
+#endif
+    }
+
+    if (EVP_PKEY_sign(pkctx, outbuf, &outlen, inbuf, inlen) <= 0) {
+        LOGE("sign EVP_PKEY_sign failed");
+        goto end;
+    }
+
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("sign NewByteArray failed");
+        goto end;
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (inbuf) env->ReleaseByteArrayElements(in, (jbyte *) inbuf, JNI_ABORT);
+    if (keybuf) env->ReleaseByteArrayElements(key, (jbyte *) keybuf, JNI_ABORT);
+    EVP_PKEY_free(pkey);
+    EVP_PKEY_CTX_free(pkctx);
+    return ret;
+}
+
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -813,7 +980,7 @@ static JNINativeMethod methods[] = {
         {"digest",                  "(Ljava/lang/String;[B)[B",     (void *) digest},
 //        {"getMacLength",            "(Ljava/lang/String;)[Ljava/lang/String;", (void *) getMacLength},
         {"mac",                     "(Ljava/lang/String;[B[B)[B",   (void *) mac},
-//        {"sign",                    "(Ljava/lang/String;[B[B)[B",              (void *) sign},
+        {"sign",                    "(Ljava/lang/String;[B[B)[B",   (void *) sign},
 //        {"verify",                  "(Ljava/lang/String;[B[B[B)I",             (void *) verify},
 //        {"publicKeyEncrypt",        "(Ljava/lang/String;[B[B)[B",              (void *) publicKeyEncrypt},
 //        {"publicKeyDecrypt",        "(Ljava/lang/String;[B[B)[B",              (void *) publicKeyDecrypt},

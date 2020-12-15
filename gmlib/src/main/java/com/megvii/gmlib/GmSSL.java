@@ -36,8 +36,8 @@ public class GmSSL {
 //    public native String[] getMacLength(String algor);
 
     public native byte[] mac(String algor, byte[] data, byte[] key);
-//
-//    public native byte[] sign(String algor, byte[] data, byte[] privateKey);
+
+    public native byte[] sign(String algor, byte[] data, byte[] privateKey);
 //
 //    public native int verify(String algor, byte[] digest, byte[] signature, byte[] publicKey);
 //
