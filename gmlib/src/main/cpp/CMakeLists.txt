@@ -36,7 +36,8 @@ find_library( # Sets the name of the path variable.
         # you want CMake to locate.
         log )
 
-target_include_directories(gmssl PRIVATE ${CMAKE_SOURCE_DIR}/gm_include)
+target_include_directories(gmssl PRIVATE ${CMAKE_SOURCE_DIR}/gm_include/${ANDROID_ABI})
+
 target_link_libraries( # Specifies the target library.
         gmssl
 

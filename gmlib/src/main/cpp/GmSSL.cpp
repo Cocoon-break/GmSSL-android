@@ -78,7 +78,7 @@
 //#include "gmssl_err.c"
 //#include "GmSSL.h"
 
-#define GMSSL_JNI_VERSION    "GmSSL-JNI API/1.1 2020-12-15"
+#define GMSSL_JNI_VERSION    "GmSSL-JNI MEGVII API/1.1 2020-12-15"
 
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "GMSSL_JNI", __VA_ARGS__)
 #define NUM_ARRAY_ELEMENTS(p) ((int) sizeof(p) / sizeof(p[0]))
@@ -169,7 +169,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
         return -1;
     }
     assert(env != NULL);
-    const char *className = "com/megvii/kas/livenessdetection/Detector";
+    const char *className = "com/megvii/gmlib/GmSSL";
     registerNativeMethods(env, className, methods, NUM_ARRAY_ELEMENTS(methods));
 
 //    const char *classModelName = "com/megvii/actionlib/Model";
