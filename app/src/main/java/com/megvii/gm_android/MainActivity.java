@@ -150,5 +150,10 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "publicKeyEncrypt--->" + "sm2Ciphertext[" + i + "] = " + sm2Ciphertext[i]);
         }
 
+        byte[] sm2Plaintext = gmSSL.publicKeyDecrypt("sm2encrypt-with-sm3", sm2Ciphertext, sm2PrivateKey);
+        for (int i = 0; i < sm2Plaintext.length; i++) {
+            Log.d(TAG, "publicKeyDecrypt--->" + "sm2Plaintext[" + i + "] = " + sm2Plaintext[i]);
+        }
+
     }
 }

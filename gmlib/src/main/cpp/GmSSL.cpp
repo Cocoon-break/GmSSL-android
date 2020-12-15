@@ -1243,6 +1243,104 @@ JNIEXPORT jbyteArray JNICALL publicKeyEncrypt(JNIEnv *env, jclass thiz, jstring 
 
 }
 
+JNIEXPORT jbyteArray JNICALL publicKeyDecrypt(JNIEnv *env, jclass thiz, jstring algor,
+                                              jbyteArray in, jbyteArray key) {
+    jbyteArray ret = NULL;
+    const char *alg = NULL;
+    const unsigned char *inbuf = NULL;
+    const unsigned char *keybuf = NULL;
+    void *outbuf = NULL;
+    int inlen, keylen;
+    size_t outlen;
+    int pkey_type = NID_undef;
+    int ec_scheme = NID_undef;
+    int ec_encrypt_param = NID_undef;
+    const unsigned char *cp;
+    EVP_PKEY *pkey = NULL;
+    EVP_PKEY_CTX *pkctx = NULL;
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("publicKeyEncrypt GetStringUTFChars failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
+        LOGE("publicKeyEncrypt GetByteArrayElements failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(in)) <= 0) {
+        LOGE("publicKeyEncrypt GetArrayLength failed");
+        goto end;
+    }
+    if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
+        LOGE("publicKeyEncrypt GetByteArrayElements 2 failed");
+        goto end;
+    }
+    if ((keylen = env->GetArrayLength(key)) <= 0) {
+        LOGE("publicKeyEncrypt GetArrayLength 2 failed");
+        goto end;
+    }
+    cp = keybuf;
+    outlen = inlen;
+
+
+    if (!get_pke_info(alg, &pkey_type, &ec_scheme, &ec_encrypt_param)) {
+        LOGE("publicKeyEncrypt GetArrayLength failed");
+        goto end;
+    }
+
+    if (!(outbuf = OPENSSL_malloc(outlen))) {
+        LOGE("publicKeyEncrypt OPENSSL_malloc failed");
+        goto end;
+    }
+    if (!(pkey = d2i_PrivateKey(pkey_type, NULL, &cp, (long) keylen))) {
+        LOGE("publicKeyEncrypt d2i_PrivateKey failed");
+        goto end;
+    }
+    if (!(pkctx = EVP_PKEY_CTX_new(pkey, NULL))) {
+        LOGE("publicKeyEncrypt EVP_PKEY_CTX_new failed");
+        goto end;
+    }
+    if (EVP_PKEY_decrypt_init(pkctx) <= 0) {
+        LOGE("publicKeyEncrypt EVP_PKEY_decrypt_init failed");
+        goto end;
+    }
+
+    if (pkey_type == EVP_PKEY_EC) {
+#if !defined(OPENSSL_NO_ECIES) || !defined(OPENSSL_NO_SM2)
+        if (!EVP_PKEY_CTX_set_ec_scheme(pkctx, ec_scheme)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ec_scheme failed");
+            goto end;
+        }
+
+        if (!EVP_PKEY_CTX_set_ec_encrypt_param(pkctx, ec_encrypt_param)) {
+            LOGE("publicKeyEncrypt EVP_PKEY_CTX_set_ec_encrypt_param failed");
+            goto end;
+        }
+#endif
+    }
+
+    if (EVP_PKEY_decrypt(pkctx, (unsigned char *) outbuf, &outlen, inbuf, inlen) <= 0) {
+        LOGE("publicKeyEncrypt EVP_PKEY_decrypt failed");
+        goto end;
+    }
+
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("publicKeyEncrypt NewByteArray failed");
+        goto end;
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (inbuf) env->ReleaseByteArrayElements(in, (jbyte *) inbuf, JNI_ABORT);
+    if (keybuf) env->ReleaseByteArrayElements(key, (jbyte *) keybuf, JNI_ABORT);
+    OPENSSL_free(outbuf);
+    EVP_PKEY_free(pkey);
+    EVP_PKEY_CTX_free(pkctx);
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -1272,7 +1370,7 @@ static JNINativeMethod methods[] = {
         {"sign",                    "(Ljava/lang/String;[B[B)[B",   (void *) sign},
         {"verify",                  "(Ljava/lang/String;[B[B[B)I",  (void *) verify},
         {"publicKeyEncrypt",        "(Ljava/lang/String;[B[B)[B",   (void *) publicKeyEncrypt},
-//        {"publicKeyDecrypt",        "(Ljava/lang/String;[B[B)[B",              (void *) publicKeyDecrypt},
+        {"publicKeyDecrypt",        "(Ljava/lang/String;[B[B)[B",   (void *) publicKeyDecrypt},
 //        {"deriveKey",               "(Ljava/lang/String;I[B[B)[B",             (void *) deriveKey},
 //        {"getErrorStrings",         "()[Ljava/lang/String;",                   (void *) getErrorStrings},
 };

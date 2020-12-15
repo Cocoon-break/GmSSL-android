@@ -41,10 +41,9 @@ public class GmSSL {
 
     public native int verify(String algor, byte[] digest, byte[] signature, byte[] publicKey);
 
-    //
     public native byte[] publicKeyEncrypt(String algor, byte[] in, byte[] publicKey);
-//
-//    public native byte[] publicKeyDecrypt(String algor, byte[] in, byte[] privateKey);
+
+    public native byte[] publicKeyDecrypt(String algor, byte[] in, byte[] privateKey);
 //
 //    public native byte[] deriveKey(String algor, int keyLength, byte[] peerPublicKey, byte[] privateKey);
 //
