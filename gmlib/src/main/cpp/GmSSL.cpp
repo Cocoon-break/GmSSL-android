@@ -94,7 +94,6 @@ JNIEXPORT jobjectArray JNICALL getVersions(JNIEnv *env, jclass thiz) {
 
     if (!(ret = env->NewObjectArray(7, env->FindClass("java/lang/String"),
                                     env->NewStringUTF("")))) {
-        LOGE("getVersions NewObjectArray failed");
         return NULL;
     }
 
@@ -130,7 +129,6 @@ JNIEXPORT jobjectArray JNICALL getCiphers(JNIEnv *env, jclass thiz) {
 
     if (!(ret = env->NewObjectArray(sk_OPENSSL_CSTRING_num(sk), env->FindClass("java/lang/String"),
                                     env->NewStringUTF("")))) {
-        LOGE("getCiphers NewObjectArray failed");
         goto end;
     }
 
@@ -165,7 +163,6 @@ JNIEXPORT jobjectArray JNICALL getDigests(JNIEnv *env, jclass thiz) {
     if (!(ret = env->NewObjectArray(sk_OPENSSL_CSTRING_num(sk),
                                     env->FindClass("java/lang/String"),
                                     env->NewStringUTF("")))) {
-        LOGE("getDigests NewObjectArray failed");
         goto end;
     }
 
@@ -192,7 +189,6 @@ JNIEXPORT jobjectArray JNICALL getMacs(JNIEnv *env, jclass thiz) {
     if (!(ret = env->NewObjectArray(OSSL_NELEM(mac_algors),
                                     env->FindClass("java/lang/String"),
                                     env->NewStringUTF("")))) {
-        LOGE("getMacs NewObjectArray failed");
         return NULL;
     }
 
@@ -230,7 +226,6 @@ JNIEXPORT jobjectArray JNICALL getSignAlgorithms(JNIEnv *env, jclass thiz) {
     if (!(ret = env->NewObjectArray(OSSL_NELEM(sign_nids),
                                     env->FindClass("java/lang/String"),
                                     env->NewStringUTF("")))) {
-        LOGE("getSignAlgorithms NewObjectArray failed");
         return NULL;
     }
 
@@ -285,7 +280,6 @@ JNIEXPORT jobjectArray JNICALL getPublicKeyEncryptions(JNIEnv *env, jclass thiz)
     if (!(ret = env->NewObjectArray(OSSL_NELEM(pke_nids),
                                     env->FindClass("java/lang/String"),
                                     env->NewStringUTF("")))) {
-        LOGE("getPublicKeyEncryptions NewObjectArray failed");
         return NULL;
     }
 
@@ -323,7 +317,6 @@ JNIEXPORT jobjectArray JNICALL getDeriveKeyAlgorithms(JNIEnv *env, jclass thiz) 
 
     if (!(ret = env->NewObjectArray(OSSL_NELEM(exch_nids), env->FindClass("java/lang/String"),
                                     env->NewStringUTF("")))) {
-        LOGE("getDeriveKeyAlgorithms NewObjectArray failed");
         return NULL;
     }
 
@@ -339,7 +332,7 @@ JNIEXPORT jbyteArray JNICALL generateRandom(JNIEnv *env, jclass clazz, jint outl
     void *outbuf = NULL;
 
     if (outlen <= 0 || outlen >= INT_MAX) {
-        LOGE("generateRandom outlen invalid");
+        LOGE("generateRandom length invalid");
         return NULL;
     }
 
@@ -353,7 +346,6 @@ JNIEXPORT jbyteArray JNICALL generateRandom(JNIEnv *env, jclass clazz, jint outl
         goto end;
     }
     if (!(ret = env->NewByteArray(outlen))) {
-        LOGE("generateRandom NewByteArray failed");
         goto end;
     }
 
@@ -370,12 +362,11 @@ JNIEXPORT jint JNICALL getCipherIVLength(JNIEnv *env, jclass thiz, jstring algor
     const EVP_CIPHER *cipher;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("getCipherIVLength GetStringUTFChars failed");
         goto end;
     }
 
     if (!(cipher = EVP_get_cipherbyname(alg))) {
-        LOGE("getCipherIVLength EVP_get_cipherbyname failed");
+        LOGE("getCipherIVLength EVP_get_cipherbyname(%s) failed", alg);
         goto end;
     }
 
@@ -392,12 +383,11 @@ JNIEXPORT jint JNICALL getCipherKeyLength(JNIEnv *env, jclass thiz, jstring algo
     const EVP_CIPHER *cipher;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("getCipherKeyLength GetStringUTFChars failed");
         goto end;
     }
 
     if (!(cipher = EVP_get_cipherbyname(alg))) {
-        LOGE("getCipherKeyLength EVP_get_cipherbyname failed");
+        LOGE("getCipherKeyLength EVP_get_cipherbyname(%s) failed", alg);
         goto end;
     }
 
@@ -414,12 +404,11 @@ JNIEXPORT jint JNICALL getCipherBlockSize(JNIEnv *env, jclass thiz, jstring algo
     const EVP_CIPHER *cipher;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("getCipherBlockSize GetStringUTFChars failed");
         goto end;
     }
 
     if (!(cipher = EVP_get_cipherbyname(alg))) {
-        LOGE("getCipherBlockSize EVP_get_cipherbyname failed");
+        LOGE("getCipherBlockSize EVP_get_cipherbyname(%s) failed", alg);
         goto end;
     }
 
@@ -443,38 +432,33 @@ JNIEXPORT jbyteArray JNICALL symmetricEncrypt(JNIEnv *env, jclass thiz, jstring 
     EVP_CIPHER_CTX *cctx = NULL;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("symmetricEncrypt GetStringUTFChars failed");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
-        LOGE("symmetricEncrypt GetByteArrayElements failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(in)) <= 0) {
-        LOGE("symmetricEncrypt GetArrayLength failed");
         goto end;
     }
     if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
-        LOGE("symmetricEncrypt GetByteArrayElements 2 failed");
         goto end;
     }
     if ((keylen = env->GetArrayLength(key)) <= 0) {
-        LOGE("symmetricEncrypt GetArrayLength 2 failed");
         goto end;
     }
     ivbuf = (unsigned char *) env->GetByteArrayElements(iv, 0);
     ivlen = env->GetArrayLength(iv);
 
     if (!(cipher = EVP_get_cipherbyname(alg))) {
-        LOGE("symmetricEncrypt EVP_get_cipherbyname failed");
+        LOGE("symmetricEncrypt EVP_get_cipherbyname(%s) failed", alg);
         goto end;
     }
     if (keylen != EVP_CIPHER_key_length(cipher)) {
-        LOGE("symmetricEncrypt EVP_CIPHER_key_length failed");
+        LOGE("symmetricEncrypt keylen != EVP_CIPHER_key_length(%s) failed", cipher);
         goto end;
     }
     if (ivlen != EVP_CIPHER_iv_length(cipher)) {
-        LOGE("symmetricEncrypt EVP_CIPHER_iv_length failed");
+        LOGE("symmetricEncrypt ivlen !=EVP_CIPHER_iv_length(%s) failed", cipher);
         goto end;
     }
     if (!(outbuf = OPENSSL_malloc(inlen + 2 * EVP_CIPHER_block_size(cipher)))) {
@@ -500,7 +484,6 @@ JNIEXPORT jbyteArray JNICALL symmetricEncrypt(JNIEnv *env, jclass thiz, jstring 
     outlen += lastlen;
 
     if (!(ret = env->NewByteArray(outlen))) {
-        LOGE("symmetricEncrypt NewByteArray failed");
         goto end;
     }
 
@@ -529,23 +512,20 @@ JNIEXPORT jbyteArray JNICALL symmetricDecrypt(JNIEnv *env, jclass thiz, jstring 
     EVP_CIPHER_CTX *cctx = NULL;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("symmetricDecrypt GetStringUTFChars failed");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
-        LOGE("symmetricDecrypt GetByteArrayElements failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(in)) <= 0) {
-        LOGE("symmetricDecrypt GetArrayLength failed");
+        LOGE("symmetricDecrypt GetArrayLength(in) <=0");
         goto end;
     }
     if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
-        LOGE("symmetricDecrypt GetByteArrayElements 2 failed");
         goto end;
     }
     if ((keylen = env->GetArrayLength(key)) <= 0) {
-        LOGE("symmetricDecrypt GetArrayLength 2 failed");
+        LOGE("symmetricDecrypt GetArrayLength(key) <=0");
         goto end;
     }
     ivbuf = (unsigned char *) env->GetByteArrayElements(iv, 0);
@@ -553,19 +533,18 @@ JNIEXPORT jbyteArray JNICALL symmetricDecrypt(JNIEnv *env, jclass thiz, jstring 
 
 
     if (!(cipher = EVP_get_cipherbyname(alg))) {
-        LOGE("symmetricDecrypt EVP_get_cipherbyname failed");
+        LOGE("symmetricDecrypt EVP_get_cipherbyname(%s) failed", alg);
         goto end;
     }
     if (keylen != EVP_CIPHER_key_length(cipher)) {
-        LOGE("symmetricDecrypt EVP_CIPHER_key_length failed");
+        LOGE("symmetricDecrypt EVP_CIPHER_key_length(%s) failed", cipher);
         goto end;
     }
     if (ivlen != EVP_CIPHER_iv_length(cipher)) {
-        LOGE("symmetricDecrypt EVP_CIPHER_iv_length failed");
+        LOGE("symmetricDecrypt ivlen !=EVP_CIPHER_iv_length(%s)", cipher);
         goto end;
     }
     if (!(outbuf = OPENSSL_malloc(inlen))) {
-        LOGE("symmetricDecrypt OPENSSL_malloc failed");
         goto end;
     }
     if (!(cctx = EVP_CIPHER_CTX_new())) {
@@ -587,7 +566,7 @@ JNIEXPORT jbyteArray JNICALL symmetricDecrypt(JNIEnv *env, jclass thiz, jstring 
     outlen += lastlen;
 
     if (!(ret = env->NewByteArray(outlen))) {
-        LOGE("symmetricDecrypt NewByteArray failed");
+        LOGE("symmetricDecrypt NewByteArray(%d) failed", outlen);
     }
 
     env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
@@ -607,12 +586,11 @@ JNIEXPORT jint JNICALL getDigestLength(JNIEnv *env, jclass thiz, jstring algor) 
     const EVP_MD *md;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("getDigestLength GetStringUTFChars failed");
         goto end;
     }
 
     if (!(md = EVP_get_digestbyname(alg))) {
-        LOGE("getDigestLength EVP_get_digestbyname failed");
+        LOGE("getDigestLength EVP_get_digestbyname(%s) failed", alg);
         goto end;
     }
 
@@ -629,12 +607,11 @@ JNIEXPORT jint JNICALL getDigestBlockSize(JNIEnv *env, jclass thiz, jstring algo
     const EVP_MD *md;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("getDigestBlockSize GetStringUTFChars failed");
         goto end;
     }
 
     if (!(md = EVP_get_digestbyname(alg))) {
-        LOGE("getDigestBlockSize EVP_get_digestbyname failed");
+        LOGE("getDigestBlockSize EVP_get_digestbyname(%s) failed", alg);
         goto end;
     }
 
@@ -655,29 +632,25 @@ JNIEXPORT jbyteArray JNICALL digest(JNIEnv *env, jclass thiz, jstring algor, jby
     const EVP_MD *md;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("digest GetStringUTFChars failed");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
-        LOGE("digest GetByteArrayElements failed");
         goto end;
     }
     if ((inlen = (size_t) env->GetArrayLength(in)) <= 0) {
-        LOGE("digest GetArrayLength failed");
+        LOGE("digest GetArrayLength(in) invalid");
         goto end;
     }
 
     if (!(md = EVP_get_digestbyname(alg))) {
-        LOGE("digest EVP_get_digestbyname failed");
+        LOGE("digest EVP_get_digestbyname(%s) failed", alg);
         goto end;
     }
     if (!EVP_Digest(inbuf, inlen, outbuf, &outlen, md, NULL)) {
-        LOGE("digest EVP_Digest failed");
         goto end;
     }
 
     if (!(ret = env->NewByteArray(outlen))) {
-        LOGE("digest NewByteArray failed");
         goto end;
     }
 
@@ -702,23 +675,19 @@ JNIEXPORT jbyteArray JNICALL mac(JNIEnv *env, jclass thiz,
 #endif
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("mac GetStringUTFChars failed");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
-        LOGE("mac GetByteArrayElements failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(in)) <= 0) {
-        LOGE("mac GetArrayLength failed");
+        LOGE("mac GetArrayLength (in) invalid");
         goto end;
     }
     if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
-        LOGE("mac GetByteArrayElements 2 failed");
         goto end;
     }
     if ((keylen = env->GetArrayLength(key)) <= 0) {
-        LOGE("mac GetArrayLength 2 failed");
         goto end;
     }
 
@@ -732,7 +701,6 @@ JNIEXPORT jbyteArray JNICALL mac(JNIEnv *env, jclass thiz,
         }
 
         if (!HMAC(md, keybuf, keylen, inbuf, inlen, outbuf, &len)) {
-            LOGE("mac HMAC failed");
             goto end;
         }
 
@@ -744,7 +712,6 @@ JNIEXPORT jbyteArray JNICALL mac(JNIEnv *env, jclass thiz,
         size_t len = sizeof(outbuf);
 
         if (!(cipher = EVP_get_cipherbyname(alg + strlen("CMAC-")))) {
-            LOGE("mac EVP_get_cipherbyname failed");
             goto end;
         }
         if (!(cctx = CMAC_CTX_new())) {
@@ -771,7 +738,6 @@ JNIEXPORT jbyteArray JNICALL mac(JNIEnv *env, jclass thiz,
     }
 
     if (!(ret = env->NewByteArray(outlen))) {
-        LOGE("mac NewByteArray failed");
         goto end;
     }
 
@@ -870,28 +836,23 @@ JNIEXPORT jbyteArray JNICALL sign(JNIEnv *env, jclass thiz,
     EVP_PKEY_CTX *pkctx = NULL;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("sign GetStringUTFChars failed");
         goto end;
     }
     if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
-        LOGE("sign GetByteArrayElements failed");
         goto end;
     }
     if ((keylen = env->GetArrayLength(key)) <= 0) {
-        LOGE("sign GetArrayLength failed");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
-        LOGE("sign GetByteArrayElements 2 failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(in)) <= 0) {
-        LOGE("sign GetArrayLength 2 failed");
+        LOGE("sign GetArrayLength(in) invalid");
         goto end;
     }
 
     if (!get_sign_info(alg, &pkey_type, &md, &ec_scheme)) {
-        LOGE("sign get_sign_info failed");
         goto end;
     }
 
@@ -970,31 +931,27 @@ JNIEXPORT jint JNICALL verify(JNIEnv *env, jclass thiz,
     EVP_PKEY_CTX *pkctx = NULL;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("verify GetStringUTFChars failed");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
-        LOGE("verify GetByteArrayElements failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(in)) <= 0) {
-        LOGE("verify GetArrayLength failed");
+        LOGE("verify GetArrayLength(in) invalid");
         goto end;
     }
     if (!(sigbuf = (unsigned char *) env->GetByteArrayElements(sig, 0))) {
-        LOGE("verify GetByteArrayElements 2 failed");
         goto end;
     }
     if ((siglen = env->GetArrayLength(sig)) <= 0) {
-        LOGE("verify GetArrayLength 2 failed");
+        LOGE("verify GetArrayLength(sig) invalid");
         goto end;
     }
     if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
-        LOGE("verify GetByteArrayElements 3 failed");
         goto end;
     }
     if ((keylen = env->GetArrayLength(key)) <= 0) {
-        LOGE("verify GetArrayLength 3 failed");
+        LOGE("verify GetArrayLength(key) invalid");
         goto end;
     }
 
@@ -1154,27 +1111,24 @@ JNIEXPORT jbyteArray JNICALL publicKeyEncrypt(JNIEnv *env, jclass thiz, jstring 
 
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("publicKeyEncrypt GetStringUTFChars failed");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
-        LOGE("publicKeyEncrypt GetByteArrayElements failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(in)) <= 0) {
-        LOGE("publicKeyEncrypt GetArrayLength <= 0 failed");
+        LOGE("publicKeyEncrypt GetArrayLength(in) <= 0 failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(in)) > 256) {
-        LOGE("publicKeyEncrypt GetArrayLength > 256 failed");
+        LOGE("publicKeyEncrypt GetArrayLength(in) > 256 failed");
         goto end;
     }
     if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
-        LOGE("publicKeyEncrypt GetByteArrayElements 2 failed");
         goto end;
     }
     if ((keylen = env->GetArrayLength(key)) <= 0) {
-        LOGE("publicKeyEncrypt GetArrayLength 3 failed");
+        LOGE("publicKeyEncrypt GetArrayLength(key) invalid");
         goto end;
     }
     cp = keybuf;
@@ -1186,7 +1140,6 @@ JNIEXPORT jbyteArray JNICALL publicKeyEncrypt(JNIEnv *env, jclass thiz, jstring 
     }
 
     if (!(outbuf = OPENSSL_malloc(outlen))) {
-        LOGE("publicKeyEncrypt OPENSSL_malloc failed");
         goto end;
     }
     if (!(pkey = d2i_PUBKEY(NULL, &cp, (long) keylen))) {
@@ -1226,7 +1179,6 @@ JNIEXPORT jbyteArray JNICALL publicKeyEncrypt(JNIEnv *env, jclass thiz, jstring 
     }
 
     if (!(ret = env->NewByteArray(outlen))) {
-        LOGE("publicKeyEncrypt NewByteArray failed");
         goto end;
     }
 
@@ -1260,23 +1212,20 @@ JNIEXPORT jbyteArray JNICALL publicKeyDecrypt(JNIEnv *env, jclass thiz, jstring 
     EVP_PKEY_CTX *pkctx = NULL;
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("publicKeyEncrypt GetStringUTFChars failed");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
-        LOGE("publicKeyEncrypt GetByteArrayElements failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(in)) <= 0) {
-        LOGE("publicKeyEncrypt GetArrayLength failed");
+        LOGE("publicKeyEncrypt GetArrayLength(in) invalid");
         goto end;
     }
     if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
-        LOGE("publicKeyEncrypt GetByteArrayElements 2 failed");
         goto end;
     }
     if ((keylen = env->GetArrayLength(key)) <= 0) {
-        LOGE("publicKeyEncrypt GetArrayLength 2 failed");
+        LOGE("publicKeyEncrypt GetArrayLength(key) invalid");
         goto end;
     }
     cp = keybuf;
@@ -1284,12 +1233,11 @@ JNIEXPORT jbyteArray JNICALL publicKeyDecrypt(JNIEnv *env, jclass thiz, jstring 
 
 
     if (!get_pke_info(alg, &pkey_type, &ec_scheme, &ec_encrypt_param)) {
-        LOGE("publicKeyEncrypt GetArrayLength failed");
+        LOGE("publicKeyEncrypt get_pke_info failed");
         goto end;
     }
 
     if (!(outbuf = OPENSSL_malloc(outlen))) {
-        LOGE("publicKeyEncrypt OPENSSL_malloc failed");
         goto end;
     }
     if (!(pkey = d2i_PrivateKey(pkey_type, NULL, &cp, (long) keylen))) {
@@ -1325,7 +1273,6 @@ JNIEXPORT jbyteArray JNICALL publicKeyDecrypt(JNIEnv *env, jclass thiz, jstring 
     }
 
     if (!(ret = env->NewByteArray(outlen))) {
-        LOGE("publicKeyEncrypt NewByteArray failed");
         goto end;
     }
 
@@ -1469,27 +1416,23 @@ JNIEXPORT jbyteArray JNICALL deriveKey(JNIEnv *env, jclass thiz, jstring algor,
 
 
     if (!(alg = env->GetStringUTFChars(algor, 0))) {
-        LOGE("publicKeyEncrypt GetStringUTFChars failed");
         goto end;
     }
     if ((outkeylen <= 0 || outkeylen > sizeof(outbuf))) {
-        LOGE("publicKeyEncrypt outkeylen invalid failed");
+        LOGE("publicKeyEncrypt outkeylen invalid");
         goto end;
     }
     if (!(inbuf = (unsigned char *) env->GetByteArrayElements(peerkey, 0))) {
-        LOGE("publicKeyEncrypt GetByteArrayElements failed");
         goto end;
     }
     if ((inlen = env->GetArrayLength(peerkey)) <= 0) {
-        LOGE("publicKeyEncrypt GetArrayLength failed");
+        LOGE("publicKeyEncrypt GetArrayLength(peerkey) invalid");
         goto end;
     }
     if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
-        LOGE("publicKeyEncrypt GetByteArrayElements failed");
         goto end;
     }
     if ((keylen = env->GetArrayLength(key)) <= 0) {
-        LOGE("publicKeyEncrypt GetArrayLength 2 failed");
         goto end;
     }
     cpin = inbuf;
