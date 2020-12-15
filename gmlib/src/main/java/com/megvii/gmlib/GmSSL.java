@@ -5,7 +5,7 @@ public class GmSSL {
 
     public native String[] getCiphers();
 //
-//    public native String[] getDigests();
+    public native String[] getDigests();
 //
 //    public native String[] getMacs();
 //

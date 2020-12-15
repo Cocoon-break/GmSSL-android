@@ -142,6 +142,44 @@ JNIEXPORT jobjectArray JNICALL getCiphers(JNIEnv *env, jclass thiz) {
     return ret;
 }
 
+static void list_md_fn(const EVP_MD *md,
+                       const char *from, const char *to, void *argv) {
+    STACK_OF(OPENSSL_CSTRING) *sk = static_cast<stack_st_OPENSSL_CSTRING *>(argv);
+    if (md) {
+        sk_OPENSSL_CSTRING_push(sk, EVP_MD_name(md));
+    } else {
+        sk_OPENSSL_CSTRING_push(sk, from);
+    }
+}
+
+JNIEXPORT jobjectArray JNICALL getDigests(
+        JNIEnv *env, jclass thiz) {
+    jobjectArray ret = NULL;
+    STACK_OF(OPENSSL_CSTRING) *sk = NULL;
+    int i;
+
+    if (!(sk = sk_OPENSSL_CSTRING_new_null())) {
+        LOGE("getDigests sk_OPENSSL_CSTRING_new_null() failed");
+        goto end;
+    }
+    EVP_MD_do_all_sorted(list_md_fn, sk);
+
+    if (!(ret = env->NewObjectArray(sk_OPENSSL_CSTRING_num(sk),
+                                    env->FindClass("java/lang/String"),
+                                    env->NewStringUTF("")))) {
+        LOGE("getDigests NewObjectArray failed");
+        goto end;
+    }
+
+    for (i = 0; i < sk_OPENSSL_CSTRING_num(sk); i++) {
+        env->SetObjectArrayElement(ret, i, env->NewStringUTF(sk_OPENSSL_CSTRING_value(sk, i)));
+    }
+
+    end:
+    sk_OPENSSL_CSTRING_free(sk);
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -152,7 +190,7 @@ JNIEXPORT jobjectArray JNICALL getCiphers(JNIEnv *env, jclass thiz) {
 static JNINativeMethod methods[] = {
         {"getVersions", "()[Ljava/lang/String;", (void *) getVersions},
         {"getCiphers",  "()[Ljava/lang/String;", (void *) getCiphers},
-//        {"getDigests",              "()[Ljava/lang/String;",                   (void *) getDigests},
+        {"getDigests",  "()[Ljava/lang/String;", (void *) getDigests},
 //        {"getMacs",                 "()[Ljava/lang/String;",                   (void *) getMacs},
 //        {"getSignAlgorithms",       "()[Ljava/lang/String;",                   (void *) getSignAlgorithms},
 //        {"getPublicKeyEncryptions", "()[Ljava/lang/String;",                   (void *) getPublicKeyEncryptions},

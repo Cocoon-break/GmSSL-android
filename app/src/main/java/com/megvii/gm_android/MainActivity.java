@@ -24,7 +24,10 @@ public class MainActivity extends AppCompatActivity {
         for (String cipher : gmSSL.getCiphers()) {
             Log.d(TAG, "cipher--->" + cipher);
         }
-
+        // getDigests
+        for (String digest : gmSSL.getDigests()) {
+            Log.d(TAG, "digest--->" + digest);
+        }
 
     }
 }
