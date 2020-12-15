@@ -38,8 +38,8 @@ public class GmSSL {
     public native byte[] mac(String algor, byte[] data, byte[] key);
 
     public native byte[] sign(String algor, byte[] data, byte[] privateKey);
-//
-//    public native int verify(String algor, byte[] digest, byte[] signature, byte[] publicKey);
+
+    public native int verify(String algor, byte[] digest, byte[] signature, byte[] publicKey);
 //
 //    public native byte[] publicKeyEncrypt(String algor, byte[] in, byte[] publicKey);
 //

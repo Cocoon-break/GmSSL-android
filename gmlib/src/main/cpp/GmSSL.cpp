@@ -954,6 +954,114 @@ JNIEXPORT jbyteArray JNICALL sign(JNIEnv *env, jclass thiz,
 }
 
 
+JNIEXPORT jint JNICALL verify(JNIEnv *env, jclass thiz,
+                              jstring algor, jbyteArray in, jbyteArray sig, jbyteArray key) {
+    jint ret = 0;
+    const char *alg = NULL;
+    const unsigned char *inbuf = NULL;
+    const unsigned char *sigbuf = NULL;
+    const unsigned char *keybuf = NULL;
+    int inlen, siglen, keylen;
+    const unsigned char *cp;
+    int pkey_type = 0;
+    const EVP_MD *md = NULL;
+    int ec_scheme = -1;
+    EVP_PKEY *pkey = NULL;
+    EVP_PKEY_CTX *pkctx = NULL;
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("verify GetStringUTFChars failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
+        LOGE("verify GetByteArrayElements failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(in)) <= 0) {
+        LOGE("verify GetArrayLength failed");
+        goto end;
+    }
+    if (!(sigbuf = (unsigned char *) env->GetByteArrayElements(sig, 0))) {
+        LOGE("verify GetByteArrayElements 2 failed");
+        goto end;
+    }
+    if ((siglen = env->GetArrayLength(sig)) <= 0) {
+        LOGE("verify GetArrayLength 2 failed");
+        goto end;
+    }
+    if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
+        LOGE("verify GetByteArrayElements 3 failed");
+        goto end;
+    }
+    if ((keylen = env->GetArrayLength(key)) <= 0) {
+        LOGE("verify GetArrayLength 3 failed");
+        goto end;
+    }
+
+    if (!get_sign_info(alg, &pkey_type, &md, &ec_scheme)) {
+        LOGE("verify get_sign_info failed");
+        goto end;
+    }
+
+    cp = keybuf;
+    if (!(pkey = d2i_PUBKEY(NULL, &cp, (long) keylen))) {
+        LOGE("verify d2i_PUBKEY failed");
+        goto end;
+    }
+
+    if (EVP_PKEY_id(pkey) != pkey_type) {
+        LOGE("verify EVP_PKEY_id failed");
+        goto end;
+    }
+    if (!(pkctx = EVP_PKEY_CTX_new(pkey, NULL))) {
+        LOGE("verify EVP_PKEY_CTX_new failed");
+        goto end;
+    }
+
+    if (EVP_PKEY_verify_init(pkctx) <= 0) {
+        LOGE("verify EVP_PKEY_verify_init failed");
+        goto end;
+    }
+
+    if (md && !EVP_PKEY_CTX_set_signature_md(pkctx, md)) {
+        LOGE("verify EVP_PKEY_CTX_set_signature_md failed");
+        goto end;
+    }
+
+
+    if (pkey_type == EVP_PKEY_RSA) {
+#ifndef OPENSSL_NO_RSA
+        if (!EVP_PKEY_CTX_set_rsa_padding(pkctx, RSA_PKCS1_PSS_PADDING)) {
+            LOGE("verify EVP_PKEY_CTX_set_rsa_padding failed");
+            goto end;
+        }
+#endif
+    } else if (pkey_type == EVP_PKEY_EC) {
+#ifndef OPENSSL_NO_SM2
+        if (!EVP_PKEY_CTX_set_ec_scheme(pkctx, OBJ_txt2nid(alg) == NID_sm2sign ?
+                                               NID_sm_scheme : NID_secg_scheme)) {
+            LOGE("verify EVP_PKEY_CTX_set_ec_scheme failed");
+            goto end;
+        }
+#endif
+    }
+
+    if (EVP_PKEY_verify(pkctx, sigbuf, siglen, inbuf, inlen) <= 0) {
+        LOGE("verify EVP_PKEY_verify failed");
+        goto end;
+    }
+
+    ret = 1;
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (inbuf) env->ReleaseByteArrayElements(in, (jbyte *) inbuf, JNI_ABORT);
+    if (sigbuf) env->ReleaseByteArrayElements(sig, (jbyte *) sigbuf, JNI_ABORT);
+    if (keybuf) env->ReleaseByteArrayElements(key, (jbyte *) keybuf, JNI_ABORT);
+    EVP_PKEY_free(pkey);
+    EVP_PKEY_CTX_free(pkctx);
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -981,7 +1089,7 @@ static JNINativeMethod methods[] = {
 //        {"getMacLength",            "(Ljava/lang/String;)[Ljava/lang/String;", (void *) getMacLength},
         {"mac",                     "(Ljava/lang/String;[B[B)[B",   (void *) mac},
         {"sign",                    "(Ljava/lang/String;[B[B)[B",   (void *) sign},
-//        {"verify",                  "(Ljava/lang/String;[B[B[B)I",             (void *) verify},
+        {"verify",                  "(Ljava/lang/String;[B[B[B)I",  (void *) verify},
 //        {"publicKeyEncrypt",        "(Ljava/lang/String;[B[B)[B",              (void *) publicKeyEncrypt},
 //        {"publicKeyDecrypt",        "(Ljava/lang/String;[B[B)[B",              (void *) publicKeyDecrypt},
 //        {"deriveKey",               "(Ljava/lang/String;I[B[B)[B",             (void *) deriveKey},
