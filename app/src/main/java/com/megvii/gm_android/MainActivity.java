@@ -54,6 +54,11 @@ public class MainActivity extends AppCompatActivity {
         }
         sm4(gmSSL);
         sm3(gmSSL);
+
+        byte[] macTag = gmSSL.mac("HMAC-SM3", "abc".getBytes(), "password".getBytes());
+        for (int i = 0; i < macTag.length; i++) {
+            Log.d(TAG, "mac--->" + "macTag[" + i + "] = " + macTag[i]);
+        }
     }
 
     private void sm4(GmSSL gmSSL) {

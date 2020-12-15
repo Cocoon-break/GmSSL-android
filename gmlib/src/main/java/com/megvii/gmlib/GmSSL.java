@@ -32,10 +32,10 @@ public class GmSSL {
     public native int getDigestBlockSize(String digest);
 
     public native byte[] digest(String algor, byte[] data);
-//
+
 //    public native String[] getMacLength(String algor);
-//
-//    public native byte[] mac(String algor, byte[] data, byte[] key);
+
+    public native byte[] mac(String algor, byte[] data, byte[] key);
 //
 //    public native byte[] sign(String algor, byte[] data, byte[] privateKey);
 //

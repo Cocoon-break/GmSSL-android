@@ -689,6 +689,104 @@ JNIEXPORT jbyteArray JNICALL digest(JNIEnv *env, jclass thiz, jstring algor, jby
     return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL mac(JNIEnv *env, jclass thiz,
+                                 jstring algor, jbyteArray in, jbyteArray key) {
+    jbyteArray ret = NULL;
+    const char *alg = NULL;
+    const unsigned char *inbuf = NULL;
+    const unsigned char *keybuf = NULL;
+    unsigned char outbuf[EVP_MAX_MD_SIZE];
+    int inlen, keylen, outlen = sizeof(outbuf);
+#ifndef OPENSSL_NO_CMAC
+    CMAC_CTX *cctx = NULL;
+#endif
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("mac GetStringUTFChars failed");
+        goto end;
+    }
+    if (!(inbuf = (unsigned char *) env->GetByteArrayElements(in, 0))) {
+        LOGE("mac GetByteArrayElements failed");
+        goto end;
+    }
+    if ((inlen = env->GetArrayLength(in)) <= 0) {
+        LOGE("mac GetArrayLength failed");
+        goto end;
+    }
+    if (!(keybuf = (unsigned char *) env->GetByteArrayElements(key, 0))) {
+        LOGE("mac GetByteArrayElements 2 failed");
+        goto end;
+    }
+    if ((keylen = env->GetArrayLength(key)) <= 0) {
+        LOGE("mac GetArrayLength 2 failed");
+        goto end;
+    }
+
+    if (memcmp(alg, "HMAC-", strlen("HMAC-")) == 0) {
+        const EVP_MD *md;
+        unsigned int len = sizeof(outbuf);
+
+        if (!(md = EVP_get_digestbyname(alg + strlen("HMAC-")))) {
+            LOGE("mac EVP_get_digestbyname failed");
+            goto end;
+        }
+
+        if (!HMAC(md, keybuf, keylen, inbuf, inlen, outbuf, &len)) {
+            LOGE("mac HMAC failed");
+            goto end;
+        }
+
+        outlen = len;
+
+#ifndef OPENSSL_NO_CMAC
+    } else if (memcmp(alg, "CMAC-", strlen("CMAC-")) == 0) {
+        const EVP_CIPHER *cipher;
+        size_t len = sizeof(outbuf);
+
+        if (!(cipher = EVP_get_cipherbyname(alg + strlen("CMAC-")))) {
+            LOGE("mac EVP_get_cipherbyname failed");
+            goto end;
+        }
+        if (!(cctx = CMAC_CTX_new())) {
+            LOGE("mac CMAC_CTX_new failed");
+            goto end;
+        }
+        if (!CMAC_Init(cctx, keybuf, keylen, cipher, NULL)) {
+            LOGE("mac CMAC_Init failed");
+            goto end;
+        }
+        if (!CMAC_Update(cctx, inbuf, inlen)) {
+            LOGE("mac CMAC_Update failed");
+            goto end;
+        }
+        if (!CMAC_Final(cctx, outbuf, &len)) {
+            LOGE("mac CMAC_Final failed");
+            goto end;
+        }
+
+        outlen = len;
+#endif
+    } else {
+        goto end;
+    }
+
+    if (!(ret = env->NewByteArray(outlen))) {
+        LOGE("mac NewByteArray failed");
+        goto end;
+    }
+
+    env->SetByteArrayRegion(ret, 0, outlen, (jbyte *) outbuf);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    if (keybuf) env->ReleaseByteArrayElements(key, (jbyte *) keybuf, JNI_ABORT);
+    if (inbuf) env->ReleaseByteArrayElements(in, (jbyte *) inbuf, JNI_ABORT);
+#ifndef OPENSSL_NO_CMAC
+    CMAC_CTX_free(cctx);
+#endif
+    return ret;
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -714,7 +812,7 @@ static JNINativeMethod methods[] = {
         {"getDigestBlockSize",      "(Ljava/lang/String;)I",        (void *) getDigestBlockSize},
         {"digest",                  "(Ljava/lang/String;[B)[B",     (void *) digest},
 //        {"getMacLength",            "(Ljava/lang/String;)[Ljava/lang/String;", (void *) getMacLength},
-//        {"mac",                     "(Ljava/lang/String;[B[B)[B",              (void *) mac},
+        {"mac",                     "(Ljava/lang/String;[B[B)[B",   (void *) mac},
 //        {"sign",                    "(Ljava/lang/String;[B[B)[B",              (void *) sign},
 //        {"verify",                  "(Ljava/lang/String;[B[B[B)I",             (void *) verify},
 //        {"publicKeyEncrypt",        "(Ljava/lang/String;[B[B)[B",              (void *) publicKeyEncrypt},
