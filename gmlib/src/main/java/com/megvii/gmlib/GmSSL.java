@@ -18,8 +18,8 @@ public class GmSSL {
     public native byte[] generateRandom(int length);
 
     public native int getCipherIVLength(String cipher);
-//
-//    public native int getCipherKeyLength(String cipher);
+
+    public native int getCipherKeyLength(String cipher);
 //
 //    public native int getCipherBlockSize(String cipher);
 //

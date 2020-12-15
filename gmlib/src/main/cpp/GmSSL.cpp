@@ -386,6 +386,27 @@ JNIEXPORT jint JNICALL getCipherIVLength(JNIEnv *env, jclass thiz, jstring algor
     return ret;
 }
 
+JNIEXPORT jint JNICALL getCipherKeyLength(JNIEnv *env, jclass thiz, jstring algor) {
+    jint ret = -1;
+    const char *alg = NULL;
+    const EVP_CIPHER *cipher;
+
+    if (!(alg = env->GetStringUTFChars(algor, 0))) {
+        LOGE("getCipherKeyLength GetStringUTFChars failed");
+        goto end;
+    }
+
+    if (!(cipher = EVP_get_cipherbyname(alg))) {
+        LOGE("getCipherKeyLength EVP_get_cipherbyname failed");
+        goto end;
+    }
+
+    ret = EVP_CIPHER_key_length(cipher);
+
+    end:
+    if (alg) env->ReleaseStringUTFChars(algor, alg);
+    return ret;
+}
 
 /** jni中定义的JNINativeMethod
  * typedef struct {
@@ -404,7 +425,7 @@ static JNINativeMethod methods[] = {
         {"getDeriveKeyAlgorithms",  "()[Ljava/lang/String;", (void *) getDeriveKeyAlgorithms},
         {"generateRandom",          "(I)[B",                 (void *) generateRandom},
         {"getCipherIVLength",       "(Ljava/lang/String;)I", (void *) getCipherIVLength},
-//        {"getCipherKeyLength",      "(Ljava/lang/String;)I",                   (void *) getCipherKeyLength},
+        {"getCipherKeyLength",      "(Ljava/lang/String;)I", (void *) getCipherKeyLength},
 //        {"getCipherBlockSize",      "(Ljava/lang/String;)I",                   (void *) getCipherBlockSize},
 //        {"symmetricEncrypt",        "(Ljava/lang/String;[B[B[B)[B",            (void *) symmetricEncrypt},
 //        {"symmetricDecrypt",        "(Ljava/lang/String;[B[B[B)[B",            (void *) symmetricDecrypt},

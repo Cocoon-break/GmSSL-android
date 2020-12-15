@@ -54,7 +54,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // getCipherIVLength
-        int sms4Len = gmSSL.getCipherIVLength("SMS4");
-        Log.d(TAG, "getCipherIVLength--->" + sms4Len);
+        int cipherIVLen = gmSSL.getCipherIVLength("SMS4");
+        Log.d(TAG, "getCipherIVLength--->" + cipherIVLen);
+
+        // getCipherKeyLength
+        int cipherKeyLen = gmSSL.getCipherKeyLength("SMS4");
+        Log.d(TAG, "getCipherKeyLength--->" + cipherKeyLen);
     }
 }
