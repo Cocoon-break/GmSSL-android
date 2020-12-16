@@ -5,10 +5,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 
+import com.megvii.gm_android.utils.TransformUtil;
 import com.megvii.gmlib.GmSSL;
+
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends AppCompatActivity {
     private String TAG = "GmSSL";
+
+    private String szPublicKey = "MIGHAgEAMBMGByqGSM49AgEGCCqBHM9VAYItBG0wawIBAQQgciJLxRTdSD9yro2l/eRJEHAlHGUnq2aMAaiJjvNLgdehRANCAAR4adLC8MCYy9Vk6eaiTrTgYnYJf7yQjV/9FMp3o3BxI3KT5KbuUglyhUkHDdUXxsMeRASSbLswV0+GsAmJV+um";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -16,6 +22,21 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         GmSSL gmSSL = new GmSSL();
+
+
+//        getMessage(gmSSL);
+//        sm4(gmSSL);
+//        sm3(gmSSL);
+
+//        byte[] macTag = gmSSL.mac("HMAC-SM3", "abc".getBytes(), "password".getBytes());
+//        for (int i = 0; i < macTag.length; i++) {
+//            Log.d(TAG, "mac--->" + "macTag[" + i + "] = " + macTag[i]);
+//        }
+
+        sm2withSM3(gmSSL);
+    }
+
+    private void getMessage(GmSSL gmSSL) {
         // getVersions
         for (String version : gmSSL.getVersions()) {
             Log.d(TAG, "version--->" + version);
@@ -52,15 +73,6 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < data.length; i++) {
             Log.d(TAG, "data[" + i + "] = " + data[i]);
         }
-        sm4(gmSSL);
-        sm3(gmSSL);
-
-        byte[] macTag = gmSSL.mac("HMAC-SM3", "abc".getBytes(), "password".getBytes());
-        for (int i = 0; i < macTag.length; i++) {
-            Log.d(TAG, "mac--->" + "macTag[" + i + "] = " + macTag[i]);
-        }
-
-        sm2(gmSSL);
     }
 
     private void sm4(GmSSL gmSSL) {
@@ -77,18 +89,17 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "getCipherBlockSize--->" + cipherBlockSize);
 
         // symmetricEncrypt
-        byte[] key = {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8};
-        byte[] iv = {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8};
-        byte[] ciphertext = gmSSL.symmetricEncrypt("SMS4", "01234567".getBytes(), key, iv);
-        for (int i = 0; i < ciphertext.length; i++) {
-            Log.d(TAG, "symmetricEncrypt--->" + "ciphertext[" + i + "] = " + ciphertext[i]);
-        }
+//        byte[] key = {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8};
+//        byte[] iv = {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8};
+        byte[] key_iv = gmSSL.generateRandom(16);
+        String src = "01234567";
+        // SMS4 就是sms4-ecb
+        byte[] ciphertext = gmSSL.symmetricEncrypt("SMS4", src.getBytes(), key_iv, key_iv);
+        Log.d(TAG, "symmetricEncrypt--->HexString: " + TransformUtil.byteArrayToHexString(ciphertext));
 
         // symmetricDecrypt
-        byte[] plaintext = gmSSL.symmetricDecrypt("sms4", ciphertext, key, iv);
-        for (int i = 0; i < plaintext.length; i++) {
-            Log.d(TAG, "symmetricDecrypt--->" + "plaintext[" + i + "] = " + plaintext[i]);
-        }
+        byte[] plaintext = gmSSL.symmetricDecrypt("SMS4", ciphertext, key_iv, key_iv);
+        Log.d(TAG, "symmetricDecrypt--->" + TransformUtil.byteArrayToUTF8String(plaintext));
     }
 
     private void sm3(GmSSL gmSSL) {
@@ -98,12 +109,13 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "getDigestBlockSize--->" + digestBlockSize);
 
         byte[] dgst = gmSSL.digest("SM3", "abc".getBytes());
-        for (int i = 0; i < dgst.length; i++) {
-            Log.d(TAG, "digest--->" + "dgst[" + i + "] = " + dgst[i]);
-        }
+        Log.d(TAG, "digest--->" + TransformUtil.byteArrayToHexString(dgst));
+//        for (int i = 0; i < dgst.length; i++) {
+//            Log.d(TAG, "digest--->" + "dgst[" + i + "] = " + dgst[i]);
+//        }
     }
 
-    private void sm2(GmSSL gmSSL) {
+    private void sm2withSM3(GmSSL gmSSL) {
         byte[] sm2PrivateKey = new byte[]{
                 (byte) 0x30, (byte) 0x77, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0x04, (byte) 0x20, (byte) 0x28,
                 (byte) 0x7d, (byte) 0x3f, (byte) 0xb9, (byte) 0xf4, (byte) 0xbb, (byte) 0xc8, (byte) 0xbd, (byte) 0xe1,
@@ -136,24 +148,32 @@ public class MainActivity extends AppCompatActivity {
                 (byte) 0x19, (byte) 0xf0, (byte) 0xf4, (byte) 0xca, (byte) 0x6e, (byte) 0xe1, (byte) 0xea, (byte) 0x86,
                 (byte) 0xe6, (byte) 0x21, (byte) 0x76};
 
-        byte[] dgst = gmSSL.digest("SM3", "abc".getBytes());
+        String src = "abc";
+        byte[] dgst = gmSSL.digest("SM3", src.getBytes());
+        String hexDgst = TransformUtil.byteArrayToHexString(dgst);
+        Log.d(TAG, "digest--->" + hexDgst);
         byte[] sign = gmSSL.sign("sm2sign", dgst, sm2PrivateKey);
-        for (int i = 0; i < sign.length; i++) {
-            Log.d(TAG, "sign--->" + "sign[" + i + "] = " + sign[i]);
-        }
+        Log.d(TAG, "sign--->" + TransformUtil.byteArrayToHexString(sign));
+//        for (int i = 0; i < sign.length; i++) {
+//            Log.d(TAG, "sign--->" + "sign[" + i + "] = " + sign[i]);
+//        }
 
         int vret = gmSSL.verify("sm2sign", dgst, sign, sm2PublicKey);
-        Log.d(TAG, "sign--->" + vret);
+        Log.d(TAG, "sign--->" + (vret == 1));
 
         byte[] sm2Ciphertext = gmSSL.publicKeyEncrypt("sm2encrypt-with-sm3", dgst, sm2PublicKey);
-        for (int i = 0; i < sm2Ciphertext.length; i++) {
-            Log.d(TAG, "publicKeyEncrypt--->" + "sm2Ciphertext[" + i + "] = " + sm2Ciphertext[i]);
-        }
+        Log.d(TAG, "publicKeyEncrypt--->" + TransformUtil.byteArrayToHexString(sm2Ciphertext));
+//        for (int i = 0; i < sm2Ciphertext.length; i++) {
+//            Log.d(TAG, "publicKeyEncrypt--->" + "sm2Ciphertext[" + i + "] = " + sm2Ciphertext[i]);
+//        }
 
         byte[] sm2Plaintext = gmSSL.publicKeyDecrypt("sm2encrypt-with-sm3", sm2Ciphertext, sm2PrivateKey);
-        for (int i = 0; i < sm2Plaintext.length; i++) {
-            Log.d(TAG, "publicKeyDecrypt--->" + "sm2Plaintext[" + i + "] = " + sm2Plaintext[i]);
-        }
+        String hexSm2Plaintext = TransformUtil.byteArrayToHexString(sm2Plaintext);
+        Log.d(TAG, "publicKeyDecrypt--->" + hexSm2Plaintext);
+        Log.d(TAG, "publicKeyDecrypt---> ok?= " + hexSm2Plaintext.equals(hexDgst));
+//        for (int i = 0; i < sm2Plaintext.length; i++) {
+//            Log.d(TAG, "publicKeyDecrypt--->" + "sm2Plaintext[" + i + "] = " + sm2Plaintext[i]);
+//        }
 
     }
 }
