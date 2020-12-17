@@ -175,7 +175,7 @@ JNIEXPORT jobjectArray JNICALL getDigests(JNIEnv *env, jclass thiz) {
     return ret;
 }
 
-char *mac_algors[] = {
+char const *mac_algors[] = {
         "CMAC-SMS4",
         "HMAC-SM3",
         "HMAC-SHA1",
@@ -454,11 +454,11 @@ JNIEXPORT jbyteArray JNICALL symmetricEncrypt(JNIEnv *env, jclass thiz, jstring 
         goto end;
     }
     if (keylen != EVP_CIPHER_key_length(cipher)) {
-        LOGE("symmetricEncrypt keylen != EVP_CIPHER_key_length(%s) failed", cipher);
+        LOGE("symmetricEncrypt keylen != EVP_CIPHER_key_length(%s) failed", alg);
         goto end;
     }
     if (ivlen != EVP_CIPHER_iv_length(cipher)) {
-        LOGE("symmetricEncrypt ivlen !=EVP_CIPHER_iv_length(%s) failed", cipher);
+        LOGE("symmetricEncrypt ivlen !=EVP_CIPHER_iv_length(%s) failed", alg);
         goto end;
     }
     if (!(outbuf = OPENSSL_malloc(inlen + 2 * EVP_CIPHER_block_size(cipher)))) {
@@ -537,11 +537,11 @@ JNIEXPORT jbyteArray JNICALL symmetricDecrypt(JNIEnv *env, jclass thiz, jstring 
         goto end;
     }
     if (keylen != EVP_CIPHER_key_length(cipher)) {
-        LOGE("symmetricDecrypt EVP_CIPHER_key_length(%s) failed", cipher);
+        LOGE("symmetricDecrypt EVP_CIPHER_key_length(%s) failed", alg);
         goto end;
     }
     if (ivlen != EVP_CIPHER_iv_length(cipher)) {
-        LOGE("symmetricDecrypt ivlen !=EVP_CIPHER_iv_length(%s)", cipher);
+        LOGE("symmetricDecrypt ivlen !=EVP_CIPHER_iv_length(%s)", alg);
         goto end;
     }
     if (!(outbuf = OPENSSL_malloc(inlen))) {
