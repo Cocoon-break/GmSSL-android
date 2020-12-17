@@ -1,9 +1,9 @@
-### env
+### ENV
 android studio 4.0.1
+
 java version "1.8.0_261"
-ndk 21.3.6528147
 
-
+ndk version 21.3.6528147
 
 ### build GmSSL
 
@@ -76,4 +76,63 @@ make
 
 编译结束获取。libcrypto.a , libssl.a 和 opensslconf.h
 
-reference: https://github.com/guanzhi/GmSSL/tree/master/java
+### 数字信封和数字签名流程
+
+#### 数字信封
+
+Client 生成对称密钥:symmetric_key
+
+Server 生成非对称密钥的公钥和私钥:asymmetric_pub_key & asymmetric_pri_key
+
+```mermaid
+graph TB
+A(Client) -->B(symmetric_key)
+C(Server) -->D(asymmetric_pub_key)
+C(Server) -->E(asymmetric_pri_key)
+```
+1. Client 使用generateRandom(16)，生成对称密钥。symmetric_key
+
+2. Client 使用symmetricEncrypt()和对称密钥，对明文进行加密。src_symmetric_en
+
+3. Client 使用publicKeyEncrypt()和Server的公钥，加密**对称密钥**。symmetric_key_en
+
+4. Client 将加密后的密文和加密后的对称密钥提供给Server端。
+
+5. Server使用publicKeyDecrypt()和Server的私钥，解密得道对称密钥。symmetric_key
+
+6. Server使用symmetricDecrypt()和对称密钥，解密密文得到明文。src
+
+```mermaid
+sequenceDiagram
+    autonumber
+    Client->>Client: generate symmetric_key
+    Client->>Client: src symmetricEncrypt-->src_symmetric_en
+    Client->>Client: symmetric_key publicKeyEncrypt-->symmetric_key_en
+    Client->>Server: src_symmetric_en and symmetric_key_en
+    Server->>Server: publicKeyDecrypt symmetric_key_en --> symmetric_key
+    Server->>Server: symmetricDecrypt src_symmetric_en --> src
+```
+
+#### 数字签名过程
+
+Server 生成非对称密钥的公钥和私钥:asymmetric_pub_key & asymmetric_pri_key
+```mermaid
+graph TB
+C(Server) -->D(asymmetric_pub_key)
+C(Server) -->E(asymmetric_pri_key)
+```
+1. Client 使用digest()，对src 计算摘要。digest_src
+2. Client 使用sign()和Server公钥，对digest_src进行签名。digest_src_sign
+3. Client 将digest_src_sign 和 src 发送给Server
+4. Server 使用verify() 对digest_src_sign 和 digest_src进行验签。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    Client->>Client: digest src-->digest_src
+    Client->>Client: digest_src sign-->digest_src_sign
+    Client->>Server: src and digest_src_sign
+    Server->>Server: verify src and digest_src_sign
+```
+
+
