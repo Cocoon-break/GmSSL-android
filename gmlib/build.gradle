@@ -34,6 +34,13 @@ android {
             path file('src/main/cpp/CMakeLists.txt')
         }
     }
+    android.libraryVariants.all { variant ->
+        if (variant.buildType.name == 'release') {
+            variant.outputs.all { output ->
+                outputFileName = "gmssl_v1.0.0.aar"
+            }
+        }
+    }
 }
 
 dependencies {
