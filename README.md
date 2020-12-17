@@ -1,5 +1,5 @@
 ## GmSSL-android
-[GmSSL](https://github.com/guanzhi/GmSSL) Android下实现。实现SM2/SM3/SM4对数据加密。如果该仓库对你有用的话，欢迎start
+[GmSSL](https://github.com/guanzhi/GmSSL) Android下实现。实现SM2/SM3/SM4对数据加密。如果该仓库对你有帮助的话，欢迎start
 
 
 
@@ -28,7 +28,7 @@
 
 1. 编译armv7和arm64使用的libssl.a和libcrypto.a。
 
-   编译环境和编译脚步参考[more](https://github.com/Cocoon-break/GmSSL-android/more.md)
+   编译环境和编译脚步参考[more](https://github.com/Cocoon-break/GmSSL-android/blob/main/more.md)
 
 2. JNI封装
 
@@ -38,7 +38,7 @@
 
 ## Other
 
-本来数字信封和数字签名流程写在[more](https://github.com/Cocoon-break/GmSSL-android/more.md)中但是github的markdown不支持mermaid，我就手动截图一份
+本来数字信封和数字签名流程写在[more](https://github.com/Cocoon-break/GmSSL-android/blob/main/more.md)中但是github的markdown不支持mermaid，我就手动截图一份
 
 1. 数字信封流程
 
@@ -67,3 +67,7 @@
    4. Server 使用verify() 对digest_src_sign 和 digest_src进行验签。
 
    ![4.jpg](https://github.com/Cocoon-break/GmSSL-android/blob/main/pics/4.jpg?raw=true)
+   
+ ## License
+ 
+[the Apache 2.0 license](https://github.com/Cocoon-break/GmSSL-android/blob/main/LICENSE)
