@@ -44,7 +44,7 @@
 
    Server 生成非对称密钥的公钥和私钥:asymmetric_pub_key & asymmetric_pri_key
 
-   ![1.jpg]()
+   ![1.jpg](https://github.com/Cocoon-break/GmSSL-android/blob/main/pics/1.jpg?raw=true)
 
    1. Client 使用generateRandom(16)，生成对称密钥。symmetric_key
    2. Client 使用symmetricEncrypt()和对称密钥，对明文进行加密。src_symmetric_en
@@ -53,17 +53,17 @@
    5. Server使用publicKeyDecrypt()和Server的私钥，解密得道对称密钥。symmetric_key
    6. Server使用symmetricDecrypt()和对称密钥，解密密文得到明文。src
 
-   ![4.jpg]()
+   ![2.jpg](https://github.com/Cocoon-break/GmSSL-android/blob/main/pics/2.jpg?raw=true)
 
 2. 数字签名流程
 
    Server 生成非对称密钥的公钥和私钥:asymmetric_pub_key & asymmetric_pri_key
 
-   ![3.jpg]()
+   ![3.jpg](https://github.com/Cocoon-break/GmSSL-android/blob/main/pics/3.jpg?raw=true)
 
    1. Client 使用digest()，对src 计算摘要。digest_src
    2. Client 使用sign()和Server公钥，对digest_src进行签名。digest_src_sign
    3. Client 将digest_src_sign 和 src 发送给Server
    4. Server 使用verify() 对digest_src_sign 和 digest_src进行验签。
 
-   ![4.jpg]()
+   ![4.jpg](https://github.com/Cocoon-break/GmSSL-android/blob/main/pics/4.jpg?raw=true)
