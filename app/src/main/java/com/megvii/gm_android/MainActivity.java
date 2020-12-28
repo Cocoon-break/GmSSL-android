@@ -189,12 +189,12 @@ public class MainActivity extends AppCompatActivity {
         byte[] ciphertext = gmSSL.symmetricEncrypt("SMS4", src.getBytes(), key_iv, key_iv);
         // 3. A用B的公钥加密会话密钥
         String publicPem = AssetsUtil.readPemContent(AssetsUtil.PemName.PUBLIC_KEY_PEM, this);
-//        byte[] sm2PublicKey = Base64.decode(publicPem, Base64.DEFAULT);
+        byte[] sm2PublicKey = Base64.decode(publicPem, Base64.DEFAULT);
         byte[] sm2Ciphertext = gmSSL.publicKeyEncrypt("sm2encrypt-with-sm3", key_iv, sm2PublicKey);
 
         //4. B使用自己的私钥解密会话密钥。
         String privatePem = AssetsUtil.readPemContent(AssetsUtil.PemName.PRIVATE_KEY_PEM, this);
-//        byte[] sm2PrivateKey = Base64.decode(privatePem, Base64.DEFAULT);
+        byte[] sm2PrivateKey = Base64.decode(privatePem, Base64.DEFAULT);
         byte[] key_iv_d = gmSSL.publicKeyDecrypt("sm2encrypt-with-sm3", sm2Ciphertext, sm2PrivateKey);
 
         //5. B使用会话密钥解密密文，得到明文
