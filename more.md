@@ -79,6 +79,26 @@ make
 
 编译结束获取build和build64文件夹下的libcrypto.a , libssl.a 和 opensslconf.h
 
+### 生成公私钥Pem
+
+1. 生成私钥
+
+   ```shell
+   openssl ecparam -genkey -name SM2 -out sm2_private_key.pem
+   ```
+
+2. 私钥转换pkcs8
+
+   ```shell
+   openssl pkcs8 -topk8 -inform PEM -in sm2_private_key.pem -outform pem -nocrypt -out private_key.pem
+   ```
+
+3. 生产公钥
+
+   ```shell
+   openssl ec -in sm2_private_key.pem -pubout -out public_key.pem
+   ```
+
 ### 数字信封和数字签名流程
 
 #### 数字信封
