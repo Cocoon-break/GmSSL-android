@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
 
         sm2withSM3(gmSSL);
         digitalEnvelope(gmSSL);
+        testPem(gmSSL);
     }
 
     private void getMessage(GmSSL gmSSL) {
@@ -200,7 +201,24 @@ public class MainActivity extends AppCompatActivity {
         //5. B使用会话密钥解密密文，得到明文
         byte[] result = gmSSL.symmetricDecrypt("SMS4", ciphertext, key_iv_d, key_iv_d);
         Log.d(TAG, "symmetricDecrypt--->" + TransformUtil.byteArrayToUTF8String(result));
+    }
 
+    private void testPem(GmSSL gmSSL) {
+        // 1. A生成一随机的对称密钥，即会话密钥
+        byte[] key_iv = gmSSL.generateRandom(16);
+        String src = "abc";
+        // 2. A用会话密钥加密明文
+        byte[] ciphertext = gmSSL.symmetricEncrypt("SMS4", src.getBytes(), key_iv, key_iv);
+        // 3. A用B的公钥加密会话密钥
+//        String publicPem = AssetsUtil.readPemContent(AssetsUtil.PemName.CER_KEY_PEM, this);
+        byte[] sm2PublicKey = AssetsUtil.readCerContent("yisuo.cer", this);
+
+        byte[] sm2Ciphertext = gmSSL.publicKeyEncrypt("sm2encrypt-with-sm3", key_iv, sm2PublicKey);
+        if (sm2Ciphertext != null && sm2Ciphertext.length > 0) {
+            Log.d(TAG, "testPem ---> ok");
+        } else {
+            Log.d(TAG, "testPem ---> fail");
+        }
 
     }
 
