@@ -79,4 +79,16 @@ public class AssetsUtil {
             return null;
         }
     }
+
+    public static X509Certificate readCertificate(String cerName, Context context) {
+        try {
+            InputStream is = context.getAssets().open(cerName);
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            X509Certificate cert = (X509Certificate) cf.generateCertificate(is);
+            return cert;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }
