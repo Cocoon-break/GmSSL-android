@@ -45,7 +45,7 @@ public class TransformUtil {
         for (int i = 0; i < byteArray.length; i++) {
             hexStringBuffer.append(byteToHex(byteArray[i]));
         }
-        return hexStringBuffer.toString();
+        return hexStringBuffer.toString().toUpperCase();
     }
 
     public static String byteArrayToUTF8String(byte[] data) {
