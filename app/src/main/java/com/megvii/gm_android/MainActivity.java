@@ -77,8 +77,7 @@ public class MainActivity extends Activity {
             InputStream inputStream = new FileInputStream("/sdcard/gmssl/luyf.jpg");
             byte[] byteArray = FileUtils.readStream(inputStream);
 
-            GmSSL gmSSL = new GmSSL();
-            envelopedData(gmSSL, byteArray);
+            envelopedData("custCert.cer", byteArray);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (Exception e) {
@@ -96,21 +95,22 @@ public class MainActivity extends Activity {
 
 
     }
-
-    public void envelopedData(GmSSL gmSSL, byte[] imgData) {
+    // GBT 35275 数字信封oid:1.2.156.10197.6.1.4.2.3
+    public void envelopedData(String certName, byte[] imgData) {
+        GmSSL gmSSL = new GmSSL();
         EnvelopData envelopData = new EnvelopData();
         envelopData.setVersion(1);
 
         byte[] key = gmSSL.generateRandom(16);
 //        Log.d(TAG,"sm4 key hexStr --->"+TransformUtil.byteArrayToHexString(key));
         FileUtils.saveGmssl("sm4 key hexStr --->" + TransformUtil.byteArrayToHexString(key), FileUtils.ENVELOP_PROCESS);
-        byte[] cipher = gmSSL.symmetricEncrypt("SMS4", imgData, key, key);
+        byte[] cipher = gmSSL.symmetricEncrypt("SMS4-ECB", imgData, key, new byte[0]);
         FileUtils.saveGmssl("sm4 cipher hexStr --->" + TransformUtil.byteArrayToHexString(cipher), FileUtils.ENVELOP_PROCESS);
         EncryptedContentInfo encryptedContentInfo = new EncryptedContentInfo();
         encryptedContentInfo.setEncryptionContent(cipher);
         envelopData.setEncryptedContent(encryptedContentInfo);
 
-        X509Certificate cert = AssetsUtil.readCertificate("custCert.cer", this);
+        X509Certificate cert = AssetsUtil.readCertificate(certName, this);
         if (cert != null) {
             BigInteger serialNumber = cert.getSerialNumber();
             String[] issuerDN = cert.getIssuerDN().getName().split(",");
@@ -194,15 +194,15 @@ public class MainActivity extends Activity {
 
     private void sm4(GmSSL gmSSL) {
         // getCipherIVLength
-        int cipherIVLen = gmSSL.getCipherIVLength("SMS4");
+        int cipherIVLen = gmSSL.getCipherIVLength("SMS4-ECB");
         Log.d(TAG, "getCipherIVLength--->" + cipherIVLen);
 
         // getCipherKeyLength
-        int cipherKeyLen = gmSSL.getCipherKeyLength("SMS4");
+        int cipherKeyLen = gmSSL.getCipherKeyLength("SMS4-ECB");
         Log.d(TAG, "getCipherKeyLength--->" + cipherKeyLen);
 
         // getCipherKeyLength
-        int cipherBlockSize = gmSSL.getCipherBlockSize("SMS4");
+        int cipherBlockSize = gmSSL.getCipherBlockSize("SMS4-ECB");
         Log.d(TAG, "getCipherBlockSize--->" + cipherBlockSize);
 
         // symmetricEncrypt
@@ -210,12 +210,12 @@ public class MainActivity extends Activity {
 //        byte[] iv = {1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8};
         byte[] key_iv = gmSSL.generateRandom(16);
         String src = "01234567";
-        // SMS4 就是sms4-ecb
-        byte[] ciphertext = gmSSL.symmetricEncrypt("SMS4", src.getBytes(), key_iv, key_iv);
+        //
+        byte[] ciphertext = gmSSL.symmetricEncrypt("SMS4-ECB", src.getBytes(), key_iv, new byte[0]);
         Log.d(TAG, "symmetricEncrypt--->HexString: " + TransformUtil.byteArrayToHexString(ciphertext));
 
         // symmetricDecrypt
-        byte[] plaintext = gmSSL.symmetricDecrypt("SMS4", ciphertext, key_iv, key_iv);
+        byte[] plaintext = gmSSL.symmetricDecrypt("SMS4-ECB", ciphertext, key_iv, new byte[0]);
         Log.d(TAG, "symmetricDecrypt--->" + TransformUtil.byteArrayToUTF8String(plaintext));
     }
 
