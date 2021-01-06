@@ -18,7 +18,7 @@
 
    直接从release中下载aar包，添加到自己工程中。最小支持Android SDK minSdkVersion 21
 
-具体的API使用参考[MainActivity.java](https://github.com/Cocoon-break/GmSSL-android/blob/main/app/src/main/java/com/megvii/gm_android/MainActivity.java)
+具体的API使用参考[MainActivity.java](https://github.com/Cocoon-break/GmSSL-android/blob/main/app/src/main/java/com/megvii/gm_android/MainActivity.java)，同时MainActivity.java中也包含了对GBT 35275 数字信封格式的使用，封装该格式使用了bouncycastle 库，具体使用直接看代码即可。
 
 
 
@@ -28,7 +28,7 @@
 
 1. 编译armv7和arm64使用的libssl.a和libcrypto.a。
 
-   编译环境和编译脚步参考[more](https://github.com/Cocoon-break/GmSSL-android/blob/main/more.md)
+   编译环境和编译脚本参考[more](https://github.com/Cocoon-break/GmSSL-android/blob/main/more.md)
 
 2. JNI封装
 
@@ -41,6 +41,8 @@
 本来数字信封和数字签名流程写在[more](https://github.com/Cocoon-break/GmSSL-android/blob/main/more.md)中但是github的markdown不支持mermaid，我就手动截图一份
 
 1. 数字信封流程
+
+   GBT-35275 标准数字信封格式，具体使用参考[MainActivity.java](https://github.com/Cocoon-break/GmSSL-android/blob/main/app/src/main/java/com/megvii/gm_android/MainActivity.java)。
 
    Server 生成非对称密钥的公钥和私钥:asymmetric_pub_key & asymmetric_pri_key
 
@@ -67,7 +69,7 @@
    4. Server 使用verify() 对digest_src_sign 和 digest_src进行验签。
 
    ![4.jpg](https://github.com/Cocoon-break/GmSSL-android/blob/main/pics/4.jpg?raw=true)
-   
+
  ## License
- 
+
 [the Apache 2.0 license](https://github.com/Cocoon-break/GmSSL-android/blob/main/LICENSE)

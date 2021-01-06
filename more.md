@@ -99,9 +99,13 @@ make
    openssl ec -in sm2_private_key.pem -pubout -out public_key.pem
    ```
 
+生成证书可以参考[GMCA 仓库](https://github.com/ziyaofeng/GMCA)
+
 ### 数字信封和数字签名流程
 
 #### 数字信封
+
+##### 1. 流程
 
 Client 生成对称密钥:symmetric_key
 
@@ -136,7 +140,23 @@ sequenceDiagram
     Server->>Server: symmetricDecrypt src_symmetric_en --> src
 ```
 
-#### 数字签名过程
+##### 2. 格式
+
+主要用是GBT 35275 标准，数字信封本质上是ASN.1 格式编码，由于没有其他现成的ASN.1 的库，就直接使用了bouncycastle库。根据标准封装了相关类和使用方法已经在[MainActivity.java](https://github.com/Cocoon-break/GmSSL-android/blob/main/app/src/main/java/com/megvii/gm_android/MainActivity.java)体现了。
+
+[GBT 35275 标准文档](https://github.com/Cocoon-break/GmSSL-android/blob/main/GBT-35275-2017.pdf)
+
+[ASN.1 在线解析库](https://lapo.it/asn1js/)
+
+以下文本可以在[ASN.1 在线解析库](https://lapo.it/asn1js/)解析出数字信封格式。
+
+```shell
+30820114060A2A811CCF550601040203A0820104308201000201013181CF3081CC020101303D3031310B300906035504061302434E3111300F060355040A1308474C435449443031310F300D06035504031306474C434130310208549EAD2894BF7D84300B06092A811CCF5501822D03047B3079022100DDAEC4AB2F96AC7CFED7B35392466FD1F71365D3904D51C0AA81A5777272A7F0022042B1B060FA41530E030B39F99610F1E90F8A59DAD400E15008B0FB7CB68886120420D33A3BD05011A74D0C1C7F449EE77D1DDBFCED67A37229AB5D6F0813EE04F98F04106F237DB2FF966D7062F4E45C9EE562CF3029060A2A811CCF550601040201300906072A811CCF55016880104BA75C32AD66CC92B14DC7F0ADF970DA
+```
+
+
+
+#### 数字签名流程
 
 Server 生成非对称密钥的公钥和私钥:asymmetric_pub_key & asymmetric_pri_key
 ```mermaid
