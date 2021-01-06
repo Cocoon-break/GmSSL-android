@@ -1,18 +1,41 @@
 package com.megvii.gm_android;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
+import android.view.View;
+import android.widget.Toast;
 
+import com.megvii.gm_android.envelop.EncryptedContentInfo;
+import com.megvii.gm_android.envelop.EnvelopData;
+import com.megvii.gm_android.envelop.RecipientInfo;
 import com.megvii.gm_android.utils.AssetsUtil;
+import com.megvii.gm_android.utils.FileUtils;
 import com.megvii.gm_android.utils.TransformUtil;
 import com.megvii.gmlib.GmSSL;
 
-import java.nio.charset.StandardCharsets;
+import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.util.ASN1Dump;
 
-public class MainActivity extends AppCompatActivity {
+import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.security.PublicKey;
+import java.security.cert.X509Certificate;
+
+import static android.os.Build.VERSION_CODES.M;
+
+public class MainActivity extends Activity {
     private String TAG = "GmSSL";
 
     private String szPublicKey = "MIGHAgEAMBMGByqGSM49AgEGCCqBHM9VAYItBG0wawIBAQQgciJLxRTdSD9yro2l/eRJEHAlHGUnq2aMAaiJjvNLgdehRANCAAR4adLC8MCYy9Vk6eaiTrTgYnYJf7yQjV/9FMp3o3BxI3KT5KbuUglyhUkHDdUXxsMeRASSbLswV0+GsAmJV+um";
@@ -22,10 +45,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        findViewById(R.id.tv_start).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                requestCameraPerm();
+            }
+        });
 
-        GmSSL gmSSL = new GmSSL();
-
-
+//        GmSSL gmSSL = new GmSSL();
 //        getMessage(gmSSL);
 //        sm4(gmSSL);
 //        sm3(gmSSL);
@@ -35,9 +62,95 @@ public class MainActivity extends AppCompatActivity {
 //            Log.d(TAG, "mac--->" + "macTag[" + i + "] = " + macTag[i]);
 //        }
 
-        sm2withSM3(gmSSL);
-        digitalEnvelope(gmSSL);
-        testPem(gmSSL);
+//        sm2withSM3(gmSSL);
+//        digitalEnvelope(gmSSL);
+//        testPem(gmSSL);
+
+    }
+
+    public void startEnvelopedData() {
+        // 清除上次记录
+        FileUtils.deleteGmsslResult();
+
+
+        try {
+            InputStream inputStream = new FileInputStream("/sdcard/gmssl/luyf.jpg");
+            byte[] byteArray = FileUtils.readStream(inputStream);
+
+            GmSSL gmSSL = new GmSSL();
+            envelopedData(gmSSL, byteArray);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+//        BitmapFactory.Options bfoOptions = new BitmapFactory.Options();
+//        bfoOptions.inScaled = false;
+//        Bitmap image = BitmapFactory.decodeFile("/sdcard/gmssl/hxm.jpg", bfoOptions);
+//
+//        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//        image.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+//        byte[] byteArray = stream.toByteArray();
+//        image.recycle();
+
+
+    }
+
+    public void envelopedData(GmSSL gmSSL, byte[] imgData) {
+        EnvelopData envelopData = new EnvelopData();
+        envelopData.setVersion(1);
+
+        byte[] key = gmSSL.generateRandom(16);
+//        Log.d(TAG,"sm4 key hexStr --->"+TransformUtil.byteArrayToHexString(key));
+        FileUtils.saveGmssl("sm4 key hexStr --->" + TransformUtil.byteArrayToHexString(key), FileUtils.ENVELOP_PROCESS);
+        byte[] cipher = gmSSL.symmetricEncrypt("SMS4", imgData, key, key);
+        FileUtils.saveGmssl("sm4 cipher hexStr --->" + TransformUtil.byteArrayToHexString(cipher), FileUtils.ENVELOP_PROCESS);
+        EncryptedContentInfo encryptedContentInfo = new EncryptedContentInfo();
+        encryptedContentInfo.setEncryptionContent(cipher);
+        envelopData.setEncryptedContent(encryptedContentInfo);
+
+        X509Certificate cert = AssetsUtil.readCertificate("custCert.cer", this);
+        if (cert != null) {
+            BigInteger serialNumber = cert.getSerialNumber();
+            String[] issuerDN = cert.getIssuerDN().getName().split(",");
+            String countryName = issuerDN[2].replace("C=", "");
+            String organizationName = issuerDN[1].replace("O=", "");
+            String commonName = issuerDN[0].replace("CN=", "");
+            RecipientInfo.IssuerAndSerialNumber issuerAndSerialNumber = new RecipientInfo.IssuerAndSerialNumber(serialNumber, countryName, organizationName, commonName);
+
+            PublicKey publicKey = cert.getPublicKey();
+            byte[] sm2Cipher = gmSSL.publicKeyEncrypt("sm2encrypt-with-sm3", key, publicKey.getEncoded());
+            Log.d(TAG, "sm2Cipher length:" + sm2Cipher.length);
+            FileUtils.saveGmssl("sm2 cipher hexStr --->" + TransformUtil.byteArrayToHexString(sm2Cipher), FileUtils.ENVELOP_PROCESS);
+            RecipientInfo info = new RecipientInfo();
+            info.setVersion(1);
+            info.setIssue(issuerAndSerialNumber);
+            info.setEncryptedKey(sm2Cipher);
+
+            envelopData.setRecipientInfo(info);
+            try {
+                byte[] enData = envelopData.getEncoded();
+                String hexStr = TransformUtil.byteArrayToHexString(enData);
+                FileUtils.saveGmssl("envelopedData hexStr --->" + hexStr, FileUtils.ENVELOP_PROCESS);
+                FileUtils.saveGmssl(hexStr, FileUtils.ENVELOP_RESULT);
+                dumpAsN1(hexStr);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void dumpAsN1(String hexStr) {
+        byte[] data = TransformUtil.hexStringToByteArray(hexStr);
+        ASN1InputStream bIn = new ASN1InputStream(new ByteArrayInputStream(data));
+        ASN1Primitive obj = null;
+        try {
+            obj = bIn.readObject();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println(ASN1Dump.dumpAsString(obj));
     }
 
     private void getMessage(GmSSL gmSSL) {
@@ -220,6 +333,38 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "testPem ---> fail");
         }
 
+    }
+
+    private void requestCameraPerm() {
+        if (android.os.Build.VERSION.SDK_INT >= M) {
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                //进行权限请求
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        EXTERNAL_STORAGE_REQ_CAMERA_CODE);
+            } else {
+                startEnvelopedData();
+            }
+        } else {
+            startEnvelopedData();
+        }
+    }
+
+    public static final int EXTERNAL_STORAGE_REQ_CAMERA_CODE = 10;
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        if (requestCode == EXTERNAL_STORAGE_REQ_CAMERA_CODE) {
+            if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {// Permission Granted
+                Toast.makeText(this, "无读写权限", Toast.LENGTH_LONG).show();
+            } else {
+                startEnvelopedData();
+            }
+        }
     }
 
 }
