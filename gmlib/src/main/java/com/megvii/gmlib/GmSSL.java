@@ -46,6 +46,8 @@ public class GmSSL {
     public native byte[] publicKeyDecrypt(String algor, byte[] in, byte[] privateKey);
 
     public native byte[] deriveKey(String algor, int keyLength, byte[] peerPublicKey, byte[] privateKey);
+
+    public native byte[] pkcs7Pack(String cerPath, byte[] content);
 //
 //    public native String[] getErrorStrings();
 

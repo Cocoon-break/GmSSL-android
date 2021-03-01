@@ -74,6 +74,7 @@
 #include <openssl/stack.h>
 #include <openssl/crypto.h>
 #include <openssl/safestack.h>
+#include <openssl/pkcs7.h>
 //#include "../e_os.h"
 //#include "gmssl_err.c"
 //#include "GmSSL.h"
@@ -1522,6 +1523,75 @@ JNIEXPORT jbyteArray JNICALL deriveKey(JNIEnv *env, jclass thiz, jstring algor,
     return ret;
 }
 
+JNIEXPORT jbyteArray JNICALL
+pkcs7Pack(JNIEnv *env, jclass thiz, jstring cerPath, jbyteArray imageData) {
+
+    char buf[4096];
+    const unsigned char *der;
+    unsigned char *p, *derTmp;
+    int len;
+    X509 *x509;
+    jbyteArray ret = NULL;
+    PKCS7 *p7;
+    PKCS7_RECIP_INFO *inf;
+    const EVP_CIPHER *evp_cipher;
+    BIO *p7bio;
+    jbyte *img = env->GetByteArrayElements(imageData, NULL);
+    int img_len = env->GetArrayLength(imageData);
+
+    const char *cerPathChar = env->GetStringUTFChars(cerPath, 0);
+    FILE *fp = fopen(cerPathChar, "rb");
+    if (!fp) {
+        LOGE("not found :%s", cerPathChar);
+        goto end;
+    }
+    len = fread(buf, 1, 4096, fp);
+    fclose(fp);
+    p = reinterpret_cast<unsigned char *>(buf);
+    x509 = X509_new();
+    d2i_X509(&x509, (const unsigned char **) &p, len);
+
+    p7 = PKCS7_new();
+    PKCS7_set_type(p7, NID_pkcs7_enveloped);
+    ASN1_INTEGER_set(p7->d.enveloped->version, 1);
+
+    evp_cipher = EVP_sms4_ecb();
+    PKCS7_set_cipher(p7, evp_cipher);
+    PKCS7_add_recipient(p7, x509);
+
+    p7bio = PKCS7_dataInit(p7, NULL);
+    BIO_write(p7bio, img, img_len);
+
+    BIO_flush(p7bio);
+    PKCS7_dataFinal(p7, p7bio);
+
+    len = i2d_PKCS7(p7, NULL);
+
+    der = (unsigned char *) malloc(len);
+    derTmp = (unsigned char *) der;
+    // 根据规范修改为这个oid
+    p7->d.enveloped->enc_data->content_type = OBJ_txt2obj("1.2.156.10197.6.1.4.2.1", 0);
+    inf = sk_PKCS7_RECIP_INFO_pop(p7->d.enveloped->recipientinfo);
+    inf->key_enc_algor->algorithm = OBJ_txt2obj("1.2.156.10197.1.301.3", 0);
+    ASN1_INTEGER_set(inf->version, 1);
+    sk_PKCS7_RECIP_INFO_push(p7->d.enveloped->recipientinfo, inf);
+
+    len = i2d_PKCS7(p7, &derTmp);
+    if (!(ret = env->NewByteArray(len))) {
+        LOGE("pkcs7PackTest NewByteArray failed");
+        goto end;
+    }
+    env->SetByteArrayRegion(ret, 0, len, (jbyte *) der);
+    end:
+    if (*cerPathChar) env->ReleaseStringUTFChars(cerPath, cerPathChar);
+    if (*img) env->ReleaseByteArrayElements(imageData, img, JNI_ABORT);
+    if (p7bio)BIO_free(p7bio);
+    if (p7)PKCS7_free(p7);
+    if (*der)delete (der);
+    return ret;
+    // OPENSSL PKCS#7(信封&解信封) http://www.mamicode.com/info-detail-641987.html
+}
+
 /** jni中定义的JNINativeMethod
  * typedef struct {
     const char* name; //Java方法的名字
@@ -1553,6 +1623,7 @@ static JNINativeMethod methods[] = {
         {"publicKeyEncrypt",        "(Ljava/lang/String;[B[B)[B",   (void *) publicKeyEncrypt},
         {"publicKeyDecrypt",        "(Ljava/lang/String;[B[B)[B",   (void *) publicKeyDecrypt},
         {"deriveKey",               "(Ljava/lang/String;I[B[B)[B",  (void *) deriveKey},
+        {"pkcs7Pack",               "(Ljava/lang/String;[B)[B",     (void *) pkcs7Pack},
 //        {"getErrorStrings",         "()[Ljava/lang/String;",                   (void *) getErrorStrings},
 };
 
