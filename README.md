@@ -18,9 +18,9 @@
 
    直接从release中下载aar包，添加到自己工程中。最小支持Android SDK minSdkVersion 21
 
-具体的API使用参考[MainActivity.java](https://github.com/Cocoon-break/GmSSL-android/blob/main/app/src/main/java/com/megvii/gm_android/MainActivity.java)，同时MainActivity.java中也包含了对GBT 35275 数字信封格式的使用，封装该格式使用了bouncycastle 库，具体使用直接看代码即可。
+具体的API使用参考[MainActivity.java](https://github.com/Cocoon-break/GmSSL-android/blob/main/app/src/main/java/com/megvii/gm_android/MainActivity.java)，同时MainActivity.java中也包含了对GBT 35275 数字信封格式的使用，具体使用直接看代码即可。
 
-
+注：PKCS7 标准的中数字信封使用OID，是国际标准的。本工程中使用的是中国标准的，所以修改了[GmSSL 表示OID](https://github.com/guanzhi/GmSSL/blob/master/crypto/objects/obj_dat.h)中的源码编译的。修改方法直接粗暴的把*OBJ_pkcs7_enveloped* 的国际标准修改成中国标准的。
 
 ## Developers
 
